@@ -8,6 +8,7 @@ import (
   "path/filepath"
   "crypto/elliptic"
   "crypto/ecdsa"
+  "crypto/rsa"
   "crypto/x509"
 //  "crypto/x509/pkix"
   "crypto/rand"
@@ -73,7 +74,18 @@ func create_private_key() {
 
 // generate a rsa private key
 func create_private_key_rsa(flags CreateFlags) {
+  if flags.CryptLength < 2048 {
+    crash_with_help(2, "Length is smaller than 2048!")
+  }
 
+  priv, err := rsa.GenerateKey( rand.Reader, flags.CryptLength)
+  if err != nil {
+    fmt.Fprintln(os.Stderr, "Error: ", err)
+    os.Exit(3)
+  }
+  marshal := x509.MarshalPKCS1PrivateKey(priv)
+  block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: marshal}
+  pem.Encode(flags.output_stream, block)
 }
 
 // generate a ecdsa private key 
@@ -89,14 +101,14 @@ func create_private_key_ecdsa(flags CreateFlags) {
 
   priv, err := ecdsa.GenerateKey(curve, rand.Reader)
   if err != nil {
-    fmt.Println("Error: ", err)
+    fmt.Fprintln(os.Stderr, "Error: ", err)
     os.Exit(3)
   }
-  result, err := x509.MarshalECPrivateKey(priv)
+  marshal, err := x509.MarshalECPrivateKey(priv)
   if err != nil {
     crash_with_help(2, fmt.Sprintf("Problems marshalling the private key: %s", err))
   }
-  block := &pem.Block{Type: "ECDSA PRIVATE KEY", Bytes: result}
+  block := &pem.Block{Type: "ECDSA PRIVATE KEY", Bytes: marshal}
   pem.Encode(flags.output_stream, block)
 }
 
