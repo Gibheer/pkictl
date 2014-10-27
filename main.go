@@ -108,7 +108,7 @@ func create_private_key_ecdsa(flags CreateFlags) {
   if err != nil {
     crash_with_help(2, fmt.Sprintf("Problems marshalling the private key: %s", err))
   }
-  block := &pem.Block{Type: "ECDSA PRIVATE KEY", Bytes: marshal}
+  block := &pem.Block{Type: "EC PRIVATE KEY", Bytes: marshal}
   pem.Encode(flags.output_stream, block)
 }
 
