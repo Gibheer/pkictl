@@ -4,6 +4,7 @@ import (
   "flag"
   "fmt"
   "io"
+  "io/ioutil"
   "os"
   "path/filepath"
   "crypto/elliptic"
@@ -21,6 +22,8 @@ import (
 const (
   RsaLowerLength = 2048
   RsaUpperLength = 4096
+  TypeLabelRSA   = "RSA PRIVATE KEY"
+  TypeLabelECDSA = "EC PRIVATE KEY"
 )
 
 var (
@@ -28,12 +31,20 @@ var (
 )
 
 type (
+  PrivateKey interface {}
+
   CreateFlags struct {
     CryptType   string // rsa or ecdsa
     CryptLength int    // the bit length
     Output      string // a path or stream to output the private key to
 
     output_stream io.WriteCloser // the actual stream to the output
+  }
+
+  SignFlags struct {
+    PrivateKeyPath string // path to the private key
+
+    private_key PrivateKey
   }
 )
 
@@ -84,7 +95,7 @@ func create_private_key_rsa(flags CreateFlags) {
     os.Exit(3)
   }
   marshal := x509.MarshalPKCS1PrivateKey(priv)
-  block := &pem.Block{Type: "RSA PRIVATE KEY", Bytes: marshal}
+  block := &pem.Block{Type: TypeLabelRSA, Bytes: marshal}
   pem.Encode(flags.output_stream, block)
 }
 
@@ -108,7 +119,7 @@ func create_private_key_ecdsa(flags CreateFlags) {
   if err != nil {
     crash_with_help(2, fmt.Sprintf("Problems marshalling the private key: %s", err))
   }
-  block := &pem.Block{Type: "EC PRIVATE KEY", Bytes: marshal}
+  block := &pem.Block{Type: TypeLabelECDSA, Bytes: marshal}
   pem.Encode(flags.output_stream, block)
 }
 
@@ -126,11 +137,68 @@ func parse_create_flags() CreateFlags {
 }
 
 // create a sign request with a private key
-func create_sign_request() {}
+func create_sign_request() {
+  flags := parse_sign_flags()
+  flags.private_key = load_private_key(flags.PrivateKeyPath)
+}
+
+// parse the flags to create a certificate sign request
+func parse_sign_flags() SignFlags {
+  flags := SignFlags{}
+  fs := flag.NewFlagSet("create-cert-sign", flag.ExitOnError)
+  fs.StringVar(&flags.PrivateKeyPath, "private-key", "", "path to the private key file")
+  fs.Parse(os.Args[2:])
+
+  return flags
+}
+
 // get information on file (private key, sign request, certificate, ...)
 func info_on_file() {}
 // sign a certificate request to create a new certificate
 func sign_request() {}
+
+// load the private key stored at `path`
+func load_private_key(path string) PrivateKey {
+  if path == "" {
+    crash_with_help(2, "No path to private key supplied!")
+  }
+
+  file, err := os.Open(path)
+  if err != nil {
+    crash_with_help(3, fmt.Sprintf("Error when opening private key: %s", err))
+  }
+  defer file.Close()
+
+  data, err := ioutil.ReadAll(file)
+  if err != nil {
+    crash_with_help(3, fmt.Sprintf("Error when reading private key: %s", err))
+  }
+
+  block, _ := pem.Decode(data)
+  if block.Type == TypeLabelRSA {
+    return load_private_key_rsa(block)
+  } else if block.Type == TypeLabelECDSA {
+    return load_private_key_ecdsa(block)
+  } else {
+    crash_with_help(2, "No valid private key file! Only RSA and ECDSA keys are allowed!")
+    return nil
+  }
+}
+
+func load_private_key_rsa(block *pem.Block) PrivateKey {
+  key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
+  if err != nil {
+    crash_with_help(3, fmt.Sprintf("Error parsing private key: %s", err))
+  }
+  return key
+}
+func load_private_key_ecdsa(block *pem.Block) PrivateKey {
+  key, err := x509.ParseECPrivateKey(block.Bytes)
+  if err != nil {
+    crash_with_help(3, fmt.Sprintf("Error parsing private key: %s", err))
+  }
+  return key
+}
 
 // print the module help
 func print_modules() {
