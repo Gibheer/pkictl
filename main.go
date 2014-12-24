@@ -8,9 +8,6 @@ import (
   "io/ioutil"
   "os"
   "path/filepath"
-//  "code.google.com/p/go.crypto/ssh/terminal"
-//  "math/big"
-//  "time"
 )
 
 const (
@@ -119,26 +116,3 @@ func crash_with_help(code int, message string) {
   print_modules()
   os.Exit(code)
 }
-
-//  fmt.Println("Lets create a cert!")
-//  template := &x509.Certificate{
-//    SerialNumber:  big.NewInt(1),
-//    Subject: pkix.Name{
-//      Organization: []string{"Acme Co"},
-//    },
-//    NotBefore: time.Now(),
-//    NotAfter: time.Now().Add(365 * 24 * time.Hour),
-//    KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-//    ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
-//    BasicConstraintsValid: true,
-//  }
-//  priv, err := ecdsa.GenerateKey(elliptic.P521(), rand.Reader)
-//  fmt.Println(priv.PublicKey, err)
-//  raw_string, err := x509.CreateCertificate(rand.Reader, template, template, &priv.PublicKey, priv)
-//  cert, err := x509.ParseCertificate(raw_string)
-//  fmt.Println(cert, err)
-//
-//  // read a password or so
-//  password, err := terminal.ReadPassword(0)
-//  fmt.Println(string(password), err)
-//}
