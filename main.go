@@ -11,7 +11,7 @@ import (
   "crypto/ecdsa"
   "crypto/rsa"
   "crypto/x509"
-//  "crypto/x509/pkix"
+  "crypto/x509/pkix"
   "crypto/rand"
   "encoding/pem"
 //  "code.google.com/p/go.crypto/ssh/terminal"
@@ -24,6 +24,7 @@ const (
   RsaUpperLength = 4096
   TypeLabelRSA   = "RSA PRIVATE KEY"
   TypeLabelECDSA = "EC PRIVATE KEY"
+  TypeLabelCSR   = "CERTIFICATE REQUEST"
 )
 
 var (
@@ -43,8 +44,11 @@ type (
 
   SignFlags struct {
     PrivateKeyPath string // path to the private key
+    Output         string // path where to store the CSR
+    BaseAttributes pkix.Name
 
     private_key PrivateKey
+    output_stream io.WriteCloser // the output stream for the CSR
   }
 )
 
@@ -65,16 +69,12 @@ func main() {
 func create_private_key() {
   flags := parse_create_flags()
 
-  if flags.Output == "STDOUT" {
-    flags.output_stream = os.Stdout
-  } else {
-    var err error
-    flags.output_stream, err = os.OpenFile(flags.Output, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0600)
-    if err != nil {
-      crash_with_help(2, fmt.Sprintf("Error when creating file %s: %s", flags.Output, err))
-    }
-    defer flags.output_stream.Close()
+  var err error
+  flags.output_stream, err = open_output_stream(flags.Output)
+  if err != nil {
+    crash_with_help(2, fmt.Sprintf("Error when creating file %s: %s", flags.Output, err))
   }
+  defer flags.output_stream.Close()
 
   switch flags.CryptType {
     case "rsa":   create_private_key_rsa(flags)
@@ -140,6 +140,24 @@ func parse_create_flags() CreateFlags {
 func create_sign_request() {
   flags := parse_sign_flags()
   flags.private_key = load_private_key(flags.PrivateKeyPath)
+
+  var err error
+  flags.output_stream, err = open_output_stream(flags.Output)
+  if err != nil {
+    crash_with_help(2, fmt.Sprintf("Error when creating file %s: %s", flags.Output, err))
+  }
+  defer flags.output_stream.Close()
+
+  csr_template := &x509.CertificateRequest{
+    Subject: flags.BaseAttributes,
+  }
+  csr_raw, err := x509.CreateCertificateRequest(rand.Reader, csr_template, flags.private_key)
+  if err != nil {
+    fmt.Fprintln(os.Stderr, "Error when generating CSR: ", err)
+    os.Exit(3)
+  }
+  block := &pem.Block{Type: TypeLabelCSR, Bytes: csr_raw}
+  pem.Encode(flags.output_stream, block)
 }
 
 // parse the flags to create a certificate sign request
@@ -147,8 +165,13 @@ func parse_sign_flags() SignFlags {
   flags := SignFlags{}
   fs := flag.NewFlagSet("create-cert-sign", flag.ExitOnError)
   fs.StringVar(&flags.PrivateKeyPath, "private-key", "", "path to the private key file")
-  fs.Parse(os.Args[2:])
+  fs.StringVar(&flags.Output, "output", "STDOUT", "path where the generated csr should be stored")
 
+  flags.BaseAttributes = pkix.Name{}
+  fs.StringVar(&flags.BaseAttributes.CommonName, "common-name", "", "the name of the resource")
+  fs.StringVar(&flags.BaseAttributes.SerialNumber, "serial", "1", "serial number for the request")
+
+  fs.Parse(os.Args[2:])
   return flags
 }
 
@@ -198,6 +221,20 @@ func load_private_key_ecdsa(block *pem.Block) PrivateKey {
     crash_with_help(3, fmt.Sprintf("Error parsing private key: %s", err))
   }
   return key
+}
+
+// open stream for given path
+func open_output_stream(path string) (io.WriteCloser, error) {
+  if path == "STDOUT" {
+    return os.Stdout, nil
+  } else {
+    var err error
+    output_stream, err := os.OpenFile(path, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0600)
+    if err != nil {
+      return nil, err
+    }
+    return output_stream, nil
+  }
 }
 
 // print the module help
