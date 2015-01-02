@@ -1,11 +1,8 @@
 package main
 
 import (
-  "crypto/x509"
-  "encoding/pem"
   "fmt"
   "io"
-  "io/ioutil"
   "os"
   "path/filepath"
 )
@@ -40,49 +37,6 @@ func main() {
 func info_on_file() {}
 // sign a certificate request to create a new certificate
 func sign_request() {}
-
-// load the private key stored at `path`
-func load_private_key(path string) PrivateKey {
-  if path == "" {
-    crash_with_help(2, "No path to private key supplied!")
-  }
-
-  file, err := os.Open(path)
-  if err != nil {
-    crash_with_help(3, fmt.Sprintf("Error when opening private key: %s", err))
-  }
-  defer file.Close()
-
-  data, err := ioutil.ReadAll(file)
-  if err != nil {
-    crash_with_help(3, fmt.Sprintf("Error when reading private key: %s", err))
-  }
-
-  block, _ := pem.Decode(data)
-  if block.Type == TypeLabelRSA {
-    return load_private_key_rsa(block)
-  } else if block.Type == TypeLabelECDSA {
-    return load_private_key_ecdsa(block)
-  } else {
-    crash_with_help(2, "No valid private key file! Only RSA and ECDSA keys are allowed!")
-    return nil
-  }
-}
-
-func load_private_key_rsa(block *pem.Block) PrivateKey {
-  key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-  if err != nil {
-    crash_with_help(3, fmt.Sprintf("Error parsing private key: %s", err))
-  }
-  return key
-}
-func load_private_key_ecdsa(block *pem.Block) PrivateKey {
-  key, err := x509.ParseECPrivateKey(block.Bytes)
-  if err != nil {
-    crash_with_help(3, fmt.Sprintf("Error parsing private key: %s", err))
-  }
-  return key
-}
 
 // open stream for given path
 func open_output_stream(path string) (io.WriteCloser, error) {
