@@ -13,6 +13,7 @@ const (
   TypeLabelRSA   = "RSA PRIVATE KEY"
   TypeLabelECDSA = "EC PRIVATE KEY"
   TypeLabelCSR   = "CERTIFICATE REQUEST"
+  TypeLabelPubKey = "PUBLIC KEY"
 )
 
 var (
@@ -24,11 +25,13 @@ func main() {
     crash_with_help(1, "No module selected!")
   }
   switch os.Args[1] {
-  case "create-private": create_private_key()
+  case "create-private":   create_private_key()
   case "create-cert-sign": create_sign_request()
+  case "create-public":    create_public_key()
   case "help": print_modules()
   case "info": info_on_file()
-  case "sign": sign_request()
+  case "sign-request": sign_request()
+  case "sign-input":   sign_input()
   default: crash_with_help(1, "Command not supported!")
   }
 }
@@ -37,6 +40,8 @@ func main() {
 func info_on_file() {}
 // sign a certificate request to create a new certificate
 func sign_request() {}
+// sign a message with a private key
+func sign_input() {}
 
 // open stream for given path
 func open_output_stream(path string) (io.WriteCloser, error) {
@@ -57,6 +62,7 @@ func print_modules() {
   fmt.Printf(`Usage: %s command args
 where 'command' is one of:
     create-private    create a new private key
+    create-public     create a public key from a private one
     create-cert-sign  create a new certificate sign request
     help              show this help
     info              get info on a file

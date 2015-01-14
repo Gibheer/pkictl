@@ -1,6 +1,7 @@
 package main
 
 import (
+  "crypto"
   "crypto/elliptic"
   "crypto/ecdsa"
   "crypto/rand"
@@ -15,7 +16,9 @@ import (
 )
 
 type (
-  PrivateKey interface {}
+  PrivateKey interface {
+    Public() crypto.PublicKey
+  }
 
   CreateFlags struct {
     CryptType   string // rsa or ecdsa
