@@ -16,10 +16,6 @@ import (
 )
 
 type (
-  PrivateKey interface {
-    Public() crypto.PublicKey
-  }
-
   CreateFlags struct {
     CryptType   string // rsa or ecdsa
     CryptLength int    // the bit length
@@ -101,7 +97,7 @@ func parse_create_flags() CreateFlags {
 }
 
 // load the private key stored at `path`
-func load_private_key(path string) PrivateKey {
+func load_private_key(path string) crypto.Signer {
   if path == "" {
     crash_with_help(2, "No path to private key supplied!")
   }
@@ -129,7 +125,7 @@ func load_private_key(path string) PrivateKey {
 }
 
 // parse rsa private key
-func load_private_key_rsa(block *pem.Block) PrivateKey {
+func load_private_key_rsa(block *pem.Block) crypto.Signer {
   key, err := x509.ParsePKCS1PrivateKey(block.Bytes)
   if err != nil {
     crash_with_help(3, fmt.Sprintf("Error parsing private key: %s", err))
@@ -138,7 +134,7 @@ func load_private_key_rsa(block *pem.Block) PrivateKey {
 }
 
 // parse ecdsa private key
-func load_private_key_ecdsa(block *pem.Block) PrivateKey {
+func load_private_key_ecdsa(block *pem.Block) crypto.Signer {
   key, err := x509.ParseECPrivateKey(block.Bytes)
   if err != nil {
     crash_with_help(3, fmt.Sprintf("Error parsing private key: %s", err))

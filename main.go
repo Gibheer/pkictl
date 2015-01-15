@@ -40,8 +40,6 @@ func main() {
 func info_on_file() {}
 // sign a certificate request to create a new certificate
 func sign_request() {}
-// sign a message with a private key
-func sign_input() {}
 
 // open stream for given path
 func open_output_stream(path string) (io.WriteCloser, error) {

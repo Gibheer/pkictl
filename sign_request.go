@@ -21,7 +21,7 @@ type (
     DNSNames       []string // alternative names to the BaseAttributes.CommonName
     IPAddresses    []net.IP // alternative IP addresses
 
-    private_key PrivateKey
+    private_key crypto.Signer
     output_stream io.Writer // the output stream for the CSR
   }
 )
