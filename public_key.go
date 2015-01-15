@@ -25,6 +25,8 @@ func create_public_key() {
   if err != nil {
     crash_with_help(2, fmt.Sprintf("Error when creating file %s: %s", flags.Output, err))
   }
+  defer flags.output_stream.Close()
+
   priv_key := load_private_key(flags.PrivateKeyPath)
   marshal, err := x509.MarshalPKIXPublicKey(priv_key.Public())
   if err != nil {
@@ -39,7 +41,7 @@ func parse_public_key_flags() PublicKeyFlags {
   flags := PublicKeyFlags{}
   fs := flag.NewFlagSet("create-public", flag.ExitOnError)
   fs.StringVar(&flags.PrivateKeyPath, "private-key", "", "path to the private key file")
-  fs.StringVar(&flags.Output, "output", "STDOUT", "path where the generated csr should be stored")
+  fs.StringVar(&flags.Output, "output", "STDOUT", "path where the generated public key should be stored")
   fs.Parse(os.Args[2:])
 
   return flags
