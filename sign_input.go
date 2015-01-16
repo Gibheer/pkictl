@@ -58,7 +58,6 @@ func create_signature(flags SignInputFlags) error {
   hash := sha256.New()
   length, _ := hash.Write(message)
   if length != len(message) { return errors.New("Error when creating hash over message!") }
-  fmt.Println(hash.Sum(nil))
 
   // create signature of the hash using the private key
   signature, err := flags.private_key.Sign(
@@ -67,7 +66,6 @@ func create_signature(flags SignInputFlags) error {
     nil,
   )
   if err != nil { return err }
-  fmt.Println(signature)
   flags.output_stream.Write(signature)
   return nil
 }
