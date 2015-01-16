@@ -28,10 +28,11 @@ func main() {
   case "create-private":   create_private_key()
   case "create-cert-sign": create_sign_request()
   case "create-public":    create_public_key()
-  case "help": print_modules()
-  case "info": info_on_file()
-  case "sign-request": sign_request()
-  case "sign-input":   sign_input()
+  case "help":             print_modules()
+  case "info":             info_on_file()
+  case "sign-request":     sign_request()
+  case "sign-input":       sign_input()
+  case "verify-signature": verify_signature()
   default: crash_with_help(1, "Command not supported!")
   }
 }
@@ -43,9 +44,10 @@ func sign_request() {}
 
 // open stream for given path
 func open_output_stream(path string) (io.WriteCloser, error) {
-  if path == "STDOUT" {
-    return os.Stdout, nil
-  } else {
+  switch path {
+  case "STDOUT": return os.Stdout, nil
+  case "STDERR": return os.Stderr, nil
+  default:
     var err error
     output_stream, err := os.OpenFile(path, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0600)
     if err != nil {
@@ -65,6 +67,8 @@ where 'command' is one of:
     help              show this help
     info              get info on a file
     sign              sign a certificate request
+    sign-input        sign a message with a private key
+    verify-signature  verify a signature
 `, filepath.Base(os.Args[0]))
   fmt.Println()
 }
