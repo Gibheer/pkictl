@@ -47,14 +47,24 @@ func open_output_stream(path string) (io.WriteCloser, error) {
   switch path {
   case "STDOUT": return os.Stdout, nil
   case "STDERR": return os.Stderr, nil
-  default:
-    var err error
-    output_stream, err := os.OpenFile(path, os.O_WRONLY | os.O_CREATE | os.O_TRUNC, 0600)
-    if err != nil {
-      return nil, err
-    }
-    return output_stream, nil
+  default: return open_stream(path, os.O_WRONLY | os.O_CREATE | os.O_TRUNC)
   }
+}
+
+func open_input_stream(path string) (io.ReadCloser, error) {
+  switch path {
+  case "STDIN": return os.Stdin, nil
+  default: return open_stream(path, os.O_RDONLY)
+  }
+}
+
+func open_stream(path string, flags int) (io.ReadWriteCloser, error) {
+  var err error
+  output_stream, err := os.OpenFile(path, flags, 0600)
+  if err != nil {
+    return nil, err
+  }
+  return output_stream, nil
 }
 
 // print the module help
