@@ -1,0 +1,12 @@
+The following list is a collection of areas, where some work is needed
+
+* reduce code size by refactoring
+* make sure that critical files are checked more rigid (filesystem permissions)
+* implement message signing for RSA keys
+* implement certificate generation
+* implement verification of certificates against rules
+* implement verification of certificates against CSRs
+* implement a way to convert keys to SSH format (separate tool?)
+* split project more into lib and CLI?
+* find a way to get ED25519 working
+* implement info command
