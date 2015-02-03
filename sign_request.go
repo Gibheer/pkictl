@@ -11,6 +11,7 @@ import (
   "io"
   "net"
   "os"
+  "reflect"
   "regexp"
 )
 
@@ -53,6 +54,10 @@ func create_sign_request() {
 func parse_sign_flags() SignFlags {
   dns_names := "" // string to hold the alternative names
   ips       := "" // string to hold the alternative ips
+  var container struct {
+      Country, Organization, OrganizationalUnit, Locality, Province,
+      StreetAddress, PostalCode string
+  }
 
   flags := SignFlags{}
   fs := flag.NewFlagSet("create-cert-sign", flag.ExitOnError)
@@ -64,7 +69,13 @@ func parse_sign_flags() SignFlags {
   fs.StringVar(&flags.BaseAttributes.SerialNumber, "serial", "1", "serial number for the request")
   fs.StringVar(&dns_names, "names", "", "alternative names (comma separated)")
   fs.StringVar(&ips, "ips", "", "alternative IPs (comma separated)")
-
+  fs.StringVar(&container.Country, "country", "", "country of the organization")
+  fs.StringVar(&container.Organization, "organization", "", "the name of the organization")
+  fs.StringVar(&container.OrganizationalUnit, "org-unit", "", "the organizational unit")
+  fs.StringVar(&container.Locality, "city", "", "the city or locality")
+  fs.StringVar(&container.Province, "province", "", "the province")
+  fs.StringVar(&container.StreetAddress, "street", "", "the street address for the cert")
+  fs.StringVar(&container.PostalCode, "postal-code", "", "the postal code of the city")
   fs.Parse(os.Args[2:])
 
   // convert array flags to config structs
@@ -72,6 +83,14 @@ func parse_sign_flags() SignFlags {
   tmp_ips        := COMMA_SPLIT.Split(ips, -1)
   for _, sip := range tmp_ips {
     flags.IPAddresses = append(flags.IPAddresses, net.ParseIP(sip))
+  }
+
+  container_type := reflect.ValueOf(container)
+  config_type    := reflect.ValueOf(&flags.BaseAttributes).Elem()
+  for i := 0; i < container_type.NumField(); i++ {
+    field     := container_type.Field(i)
+    new_field := config_type.FieldByName(container_type.Type().Field(i).Name)
+    new_field.Set(reflect.ValueOf(COMMA_SPLIT.Split(field.String(), -1)))
   }
 
   return flags
