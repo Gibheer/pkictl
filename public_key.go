@@ -1,5 +1,7 @@
 package main
 
+// create a public key from a private key
+
 import (
   "crypto/x509"
   "encoding/pem"

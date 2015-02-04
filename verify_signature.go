@@ -1,5 +1,7 @@
 package main
 
+// verify a signature generated with a private key
+
 import (
   "crypto/ecdsa"
   "crypto/sha256"

@@ -1,5 +1,7 @@
 package main
 
+// create a sign request needed for the final certificate
+
 import (
   "crypto"
   "crypto/rand"

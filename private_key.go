@@ -1,5 +1,7 @@
 package main
 
+// generate an ecdsa or rsa private key
+
 import (
   "crypto"
   "crypto/elliptic"
