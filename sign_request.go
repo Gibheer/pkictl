@@ -79,10 +79,14 @@ func parse_sign_flags() SignFlags {
   fs.Parse(os.Args[2:])
 
   // convert array flags to config structs
-  flags.DNSNames =  COMMA_SPLIT.Split(dns_names, -1)
-  tmp_ips        := COMMA_SPLIT.Split(ips, -1)
-  for _, sip := range tmp_ips {
-    flags.IPAddresses = append(flags.IPAddresses, net.ParseIP(sip))
+  if dns_names != "" {
+    flags.DNSNames =  COMMA_SPLIT.Split(dns_names, -1)
+  }
+  if ips != "" {
+    tmp_ips        := COMMA_SPLIT.Split(ips, -1)
+    for _, sip := range tmp_ips {
+      flags.IPAddresses = append(flags.IPAddresses, net.ParseIP(sip))
+    }
   }
 
   container_type := reflect.ValueOf(container)
