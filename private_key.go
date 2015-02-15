@@ -2,7 +2,7 @@ package main
 
 import (
   "errors"
-  "github.com/gibheer/pkilib"
+  "github.com/gibheer/pki"
 )
 
 const (

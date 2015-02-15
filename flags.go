@@ -10,7 +10,7 @@ import (
   "io"
   "os"
 
-  "github.com/gibheer/pkilib"
+  "github.com/gibheer/pki"
 )
 
 const (

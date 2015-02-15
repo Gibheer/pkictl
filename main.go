@@ -5,7 +5,7 @@ import (
   "os"
   "path/filepath"
 
-  "github.com/gibheer/pkilib"
+  "github.com/gibheer/pki"
 )
 
 var (
