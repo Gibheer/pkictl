@@ -161,7 +161,13 @@ func (f *Flags) parsePrivateKeyGenerationFlags() error {
     case 521: f.Flags.PrivateKeyGenerationFlags.Curve = elliptic.P521()
     default: return fmt.Errorf("Curve %d unknown!", f.flag_container.length)
     }
-  case "rsa": f.Flags.PrivateKeyGenerationFlags.Size = f.flag_container.length
+  case "rsa":
+    size := f.flag_container.length
+    if RsaLowerLength <= size && size <= RsaUpperLength {
+      f.Flags.PrivateKeyGenerationFlags.Size = size
+    } else {
+      return fmt.Errorf("Length of %d is not allowed for rsa!", size)
+    }
   default: return fmt.Errorf("Type %s is unknown!", pk_type)
   }
   return nil
