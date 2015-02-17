@@ -48,18 +48,18 @@ func create_private_key() {
   fs.AddOutput()
   fs.AddPrivateKeyGenerationFlags()
   err := fs.Parse(program_args())
-  if err != nil { crash_with_help(1, fmt.Sprintf("%s", err)) }
+  if err != nil { os.Exit(2) }
 
   var pk pki.Pemmer
   switch fs.Flags.PrivateKeyGenerationFlags.Type {
     case "ecdsa": pk, err = pki.NewPrivateKeyEcdsa(fs.Flags.PrivateKeyGenerationFlags.Curve)
     case "rsa":   pk, err = pki.NewPrivateKeyRsa(fs.Flags.PrivateKeyGenerationFlags.Size)
   }
-  if err != nil { crash_with_help(2, fmt.Sprintf("%s", err)) }
+  if err != nil { os.Exit(2) }
   marsh_pem, err := pk.MarshalPem()
-  if err != nil { crash_with_help(2, fmt.Sprintf("%s", err)) }
+  if err != nil { os.Exit(2) }
   _, err = marsh_pem.WriteTo(fs.Flags.Output)
-  if err != nil { crash_with_help(2, fmt.Sprintf("%s", err)) }
+  if err != nil { os.Exit(2) }
 }
 
 // create a public key derived from a private key
@@ -68,14 +68,14 @@ func create_public_key() {
   fs.AddPrivateKey()
   fs.AddOutput()
   err := fs.Parse(program_args())
-  if err != nil { crash_with_help(1, fmt.Sprintf("%s", err)) }
+  if err != nil { os.Exit(2) }
 
   var pub_key pki.Pemmer
   pub_key = fs.Flags.PrivateKey.Public()
   marsh_pem, err := pub_key.MarshalPem()
-  if err != nil { crash_with_help(2, fmt.Sprintf("%s", err)) }
+  if err != nil { os.Exit(2) }
   _, err = marsh_pem.WriteTo(fs.Flags.Output)
-  if err != nil { crash_with_help(2, fmt.Sprintf("%s", err)) }
+  if err != nil { os.Exit(2) }
 }
 
 // print the module help

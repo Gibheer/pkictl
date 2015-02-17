@@ -65,11 +65,12 @@ type (
   }
 
   Flags struct {
+    Name           string        // name of the sub function
     flagset        *flag.FlagSet // the flagset reference for printing the help
     flag_container *paramContainer
-    Flags          *flagSet    // the end result of the flag setting
+    Flags          *flagSet      // the end result of the flag setting
 
-    check_list     []flagCheck // list of all checks
+    check_list     []flagCheck   // list of all checks
   }
 
   flagCheck func()(error)
@@ -78,8 +79,9 @@ type (
 // create a new flag handler with the name of the subfunction
 func NewFlags(method_name string) *Flags {
   return &Flags{
+    Name:           method_name,
     Flags:          &flagSet{},
-    flagset:        flag.NewFlagSet(method_name, flag.ExitOnError),
+    flagset:        flag.NewFlagSet(method_name, flag.ContinueOnError),
     check_list:     make([]flagCheck, 0),
     flag_container: &paramContainer{},
   }
@@ -90,9 +92,19 @@ func (f *Flags) Parse(options []string) error {
   f.flagset.Parse(options)
   for _, check := range f.check_list {
     // TODO handle error in a betetr way (output specific help, not command help)
-    if err := check(); err != nil { return err }
+    if err := check(); err != nil {
+      f.Usagef("%s", err)
+      return err
+    }
   }
   return nil
+}
+
+func (f *Flags) Usagef(message string, args ...interface{}) {
+  fmt.Fprintf(os.Stderr, "error: " + message + "\n", args...)
+  fmt.Fprintf(os.Stderr, "usage: %s %s [options]\n", os.Args[0], f.Name)
+  fmt.Fprint(os.Stderr,  "where options are:\n")
+  f.flagset.PrintDefaults()
 }
 
 // add the private key option to the requested flags
