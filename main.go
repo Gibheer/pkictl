@@ -32,12 +32,12 @@ func main() {
   switch os.Args[1] {
   case "create-private":   create_private_key()
   case "create-public":    create_public_key()
-//  case "create-cert-sign": create_sign_request()
-//  case "help":             print_modules()
+  case "help":             print_modules()
 //  case "info":             info_on_file()
-//  case "sign-request":     sign_request()
 //  case "sign-input":       sign_input()
 //  case "verify-signature": verify_signature()
+//  case "create-cert-sign": create_sign_request()
+//  case "sign-request":     sign_request()
   default: crash_with_help(1, "Command not supported!")
   }
 }
