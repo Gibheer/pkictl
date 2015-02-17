@@ -50,10 +50,10 @@ func create_private_key() {
   err := fs.Parse(program_args())
   if err != nil { crash_with_help(1, fmt.Sprintf("%s", err)) }
 
-  var pk pkilib.Pemmer
+  var pk pki.Pemmer
   switch fs.Flags.PrivateKeyGenerationFlags.Type {
-    case "ecdsa": pk, err = pkilib.NewPrivateKeyEcdsa(fs.Flags.PrivateKeyGenerationFlags.Curve)
-    case "rsa":   pk, err = pkilib.NewPrivateKeyRsa(fs.Flags.PrivateKeyGenerationFlags.Size)
+    case "ecdsa": pk, err = pki.NewPrivateKeyEcdsa(fs.Flags.PrivateKeyGenerationFlags.Curve)
+    case "rsa":   pk, err = pki.NewPrivateKeyRsa(fs.Flags.PrivateKeyGenerationFlags.Size)
   }
   if err != nil { crash_with_help(2, fmt.Sprintf("%s", err)) }
   marsh_pem, err := pk.MarshalPem()
@@ -66,10 +66,16 @@ func create_private_key() {
 func create_public_key() {
   fs := NewFlags("create-public")
   fs.AddPrivateKey()
+  fs.AddOutput()
   err := fs.Parse(program_args())
   if err != nil { crash_with_help(1, fmt.Sprintf("%s", err)) }
 
-  fmt.Println(fs.Flags.PrivateKey.Public())
+  var pub_key pki.Pemmer
+  pub_key = fs.Flags.PrivateKey.Public()
+  marsh_pem, err := pub_key.MarshalPem()
+  if err != nil { crash_with_help(2, fmt.Sprintf("%s", err)) }
+  _, err = marsh_pem.WriteTo(fs.Flags.Output)
+  if err != nil { crash_with_help(2, fmt.Sprintf("%s", err)) }
 }
 
 // print the module help

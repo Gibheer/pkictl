@@ -16,16 +16,16 @@ var (
 
 // Read the private key from the path and try to figure out which type of key it
 // might be.
-func ReadPrivateKeyFile(path string) (pkilib.PrivateKey, error) {
+func ReadPrivateKeyFile(path string) (pki.PrivateKey, error) {
   raw_pk, err := readSectionFromFile(path, TypeLabelECDSA)
   if err == nil {
-    pk, err := pkilib.LoadPrivateKeyEcdsa(raw_pk)
+    pk, err := pki.LoadPrivateKeyEcdsa(raw_pk)
     if err != nil { return nil, err }
     return pk, nil
   }
   raw_pk, err = readSectionFromFile(path, TypeLabelRSA)
   if err == nil {
-    pk, err := pkilib.LoadPrivateKeyRsa(raw_pk)
+    pk, err := pki.LoadPrivateKeyRsa(raw_pk)
     if err != nil { return nil, err }
     return pk, nil
   }

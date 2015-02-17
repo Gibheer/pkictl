@@ -51,7 +51,7 @@ type (
 
   // a container for the refined flags
   flagSet struct {
-    PrivateKey pkilib.PrivateKey
+    PrivateKey pki.PrivateKey
     Output     io.WriteCloser
 
     // private key specific stuff
