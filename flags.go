@@ -78,13 +78,16 @@ type (
 
 // create a new flag handler with the name of the subfunction
 func NewFlags(method_name string) *Flags {
-  return &Flags{
+  flagset := flag.NewFlagSet(method_name, flag.ExitOnError)
+  flags   := &Flags{
     Name:           method_name,
     Flags:          &flagSet{},
-    flagset:        flag.NewFlagSet(method_name, flag.ContinueOnError),
+    flagset:        flagset,
     check_list:     make([]flagCheck, 0),
     flag_container: &paramContainer{},
   }
+  flagset.Usage = flags.Usage
+  return flags
 }
 
 // check all parameters for validity
@@ -100,8 +103,14 @@ func (f *Flags) Parse(options []string) error {
   return nil
 }
 
+// print a message with the usage part
 func (f *Flags) Usagef(message string, args ...interface{}) {
   fmt.Fprintf(os.Stderr, "error: " + message + "\n", args...)
+  f.Usage()
+}
+
+// print the usage of the current flag set
+func (f *Flags) Usage() {
   fmt.Fprintf(os.Stderr, "usage: %s %s [options]\n", os.Args[0], f.Name)
   fmt.Fprint(os.Stderr,  "where options are:\n")
   f.flagset.PrintDefaults()
