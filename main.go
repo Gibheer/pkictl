@@ -69,6 +69,7 @@ func create_public_key() {
   if err != nil { os.Exit(2) }
 }
 
+// sign a message using he private key
 func sign_input() {
   fs := NewFlags("sign-input")
   fs.AddPrivateKey()
