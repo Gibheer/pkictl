@@ -41,6 +41,7 @@ type (
   // a container go gather all incoming flags for further processing
   paramContainer struct {
     outputPath       string // path to output whatever is generated
+    inputPath        string // path to an input resource
     cryptType        string // type of something (private key)
     length           int    // the length of something (private key)
     privateKeyPath   string // path to the private key
@@ -53,6 +54,7 @@ type (
   flagSet struct {
     PrivateKey pki.PrivateKey
     Output     io.WriteCloser
+    Input      io.ReadCloser
 
     // private key specific stuff
     PrivateKeyGenerationFlags privateKeyGenerationFlags
@@ -124,6 +126,7 @@ func (f *Flags) AddPrivateKey() {
 
 // check the private key flag and load the private key
 func (f *Flags) parsePrivateKey() error {
+  if f.flag_container.privateKeyPath == "" { return fmt.Errorf("No private key given!") }
   // check permissions of private key file
   info, err := os.Stat(f.flag_container.privateKeyPath)
   if err != nil { return fmt.Errorf("Error reading private key: %s", err) }
@@ -155,6 +158,24 @@ func (f *Flags) parseOutput() error {
     os.O_WRONLY | os.O_APPEND | os.O_CREATE, // do not kill users files!
     0600,
   )
+  if err != nil { return err }
+  return nil
+}
+
+// add the input parameter to load resources from
+func (f *Flags) AddInput() {
+  f.check_list = append(f.check_list, f.parseInput)
+  f.flagset.StringVar(&f.flag_container.inputPath, "input", "STDIN", "path to the input or STDIN")
+}
+
+// parse the input parameter and open the file handle
+func (f *Flags) parseInput() error {
+  if f.flag_container.inputPath == "STDIN" {
+    f.Flags.Input = os.Stdin
+    return nil
+  }
+  var err error
+  f.Flags.Input, err = os.Open(f.flag_container.inputPath)
   if err != nil { return err }
   return nil
 }
