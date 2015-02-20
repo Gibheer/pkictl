@@ -24,7 +24,7 @@ func main() {
   case "create-private":   create_private_key()
   case "create-public":    create_public_key()
   case "sign-input":       sign_input()
-//  case "verify-signature": verify_signature()
+  case "verify-signature": verify_input()
 //  case "create-cert-sign": create_sign_request()
 //  case "sign-request":     sign_request()
   case "help":             print_modules()
@@ -73,8 +73,8 @@ func create_public_key() {
 func sign_input() {
   fs := NewFlags("sign-input")
   fs.AddPrivateKey()
-  fs.AddOutput()
   fs.AddInput()
+  fs.AddOutput()
   err := fs.Parse(program_args())
   if err != nil { os.Exit(2) }
 
@@ -90,6 +90,29 @@ func sign_input() {
     // we can ignore the result, as either Stdout did work or not
     _, _ = io.WriteString(fs.Flags.Output, "\n")
   }
+}
+
+// verify a message using a signature and a public key
+func verify_input() {
+  fs := NewFlags("sign-input")
+  fs.AddPublicKey()
+  fs.AddInput()
+  fs.AddOutput()
+  fs.AddSignature()
+  err := fs.Parse(program_args())
+  if err != nil { os.Exit(2) }
+
+  signature := fs.Flags.Signature
+  message, err := ioutil.ReadAll(fs.Flags.Input)
+  if err != nil { crash_with_help(2, "Error reading input: %s", err) }
+  valid, err := fs.Flags.PublicKey.Verify(message, signature, crypto.SHA256)
+  if err != nil { crash_with_help(2, "Could not verify message with signature: %s", err) }
+  if valid {
+    fmt.Println("valid")
+    os.Exit(0)
+  }
+  fmt.Println("invalid")
+  os.Exit(1)
 }
 
 // print the module help
@@ -110,7 +133,7 @@ where 'command' is one of:
 
 // crash and provide a helpful message
 func crash_with_help(code int, message string, args ...interface{}) {
-  fmt.Fprintln(os.Stderr, message)
+  fmt.Fprintf(os.Stderr, message + "\n", args...)
   print_modules()
   os.Exit(code)
 }

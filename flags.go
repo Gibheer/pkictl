@@ -5,6 +5,7 @@ package main
 
 import (
   "crypto/elliptic"
+  "encoding/base64"
   "flag"
   "fmt"
   "io"
@@ -48,13 +49,17 @@ type (
     publicKeyPath    string // path to the public key
     signRequestPath  string // path to the certificate sign request
     certificateFlags *certFlagsContainer // container for certificate related flags
+    signature        string // a base64 encoded signature
   }
 
   // a container for the refined flags
   flagSet struct {
     PrivateKey pki.PrivateKey
+    PublicKey  pki.PublicKey
     Output     io.WriteCloser
     Input      io.ReadCloser
+    // an asn1 encoded signature of a signage process
+    Signature  []byte
 
     // private key specific stuff
     PrivateKeyGenerationFlags privateKeyGenerationFlags
@@ -140,6 +145,22 @@ func (f *Flags) parsePrivateKey() error {
   return nil
 }
 
+// add the public key flag
+func (f *Flags) AddPublicKey() {
+  f.check_list = append(f.check_list, f.parsePublicKey)
+  f.flagset.StringVar(&f.flag_container.publicKeyPath, "public-key", "", "path to the public key")
+}
+
+// parse public key flag
+func (f *Flags) parsePublicKey() error {
+  if f.flag_container.publicKeyPath == "" { return fmt.Errorf("No public key given!") }
+
+  pu, err := ReadPublicKeyFile(f.flag_container.publicKeyPath)
+  if err != nil { return fmt.Errorf("Error reading public key: %s", err) }
+  f.Flags.PublicKey = pu
+  return nil
+}
+
 // add the output parameter to the checklist
 func (f *Flags) AddOutput() {
   f.check_list = append(f.check_list, f.parseOutput)
@@ -212,5 +233,19 @@ func (f *Flags) parsePrivateKeyGenerationFlags() error {
     }
   default: return fmt.Errorf("Type %s is unknown!", pk_type)
   }
+  return nil
+}
+
+// add the signature flag to load a signature from a signing process
+func (f *Flags) AddSignature() {
+  f.check_list = append(f.check_list, f.parseSignature)
+  f.flagset.StringVar(&f.flag_container.signature, "signature", "", "the base64 encoded signature to use for verification")
+}
+
+// parse the signature flag
+func (f *Flags) parseSignature() error {
+  var err error
+  f.Flags.Signature, err = base64.StdEncoding.DecodeString(f.flag_container.signature)
+  if err != nil { return err }
   return nil
 }
