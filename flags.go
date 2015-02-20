@@ -48,17 +48,21 @@ type (
     privateKeyPath   string // path to the private key
     publicKeyPath    string // path to the public key
     signRequestPath  string // path to the certificate sign request
-    certificateFlags *certFlagsContainer // container for certificate related flags
+    certificateFlags certFlagsContainer // container for certificate related flags
     signature        string // a base64 encoded signature
   }
 
   // a container for the refined flags
   flagSet struct {
+    // loaded private key
     PrivateKey pki.PrivateKey
+    // loaded public key
     PublicKey  pki.PublicKey
-    Output     io.WriteCloser
+    // the IO handler for input
     Input      io.ReadCloser
-    // an asn1 encoded signature of a signage process
+    // the IO handler for output
+    Output     io.WriteCloser
+    // signature from the args
     Signature  []byte
 
     // private key specific stuff
