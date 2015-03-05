@@ -5,11 +5,15 @@ package main
 
 import (
   "crypto/elliptic"
+  "crypto/x509/pkix"
   "encoding/base64"
   "flag"
   "fmt"
   "io"
+  "net"
   "os"
+  "reflect"
+  "strings"
 
   "github.com/gibheer/pki"
 )
@@ -26,17 +30,22 @@ var (
 type (
   // holds all certificate related flags, which need parsing afterwards
   certFlagsContainer struct {
-    serialNumber int    // the serial number for the cert
-    commonName   string // the common name used in the cert
-    dnsNames     string // all alternative names in the certificate (comma separated list)
-    ipAddresses  string // all IP addresses in the certificate (comma separated list)
-    country      string // the country names which should end up in the cert (comma separated list)
-    organization string // the organization names (comma separated list)
-    organizationalUnit string // the organizational units (comma separated list)
-    locality     string // the city or locality (comma separated list)
-    province     string // the province name (comma separated list)
-    streetAddress string // the street addresses of the organization (comma separated list)
-    postalCode   string // the postal codes of the locality
+    manual struct {
+      serialNumber   string // the serial number for the cert
+      commonName     string // the common name used in the cert
+      dnsNames       string // all alternative names in the certificate (comma separated list)
+      ipAddresses    string // all IP addresses in the certificate (comma separated list)
+      emailAddresses string // alternative email addresses
+    }
+    automatic struct {
+      Country       string // the country names which should end up in the cert (comma separated list)
+      Organization  string // the organization names (comma separated list)
+      OrganizationalUnit string // the organizational units (comma separated list)
+      Locality      string // the city or locality (comma separated list)
+      Province      string // the province name (comma separated list)
+      StreetAddress string // the street addresses of the organization (comma separated list)
+      PostalCode    string // the postal codes of the locality
+    }
   }
 
   // a container go gather all incoming flags for further processing
@@ -64,9 +73,10 @@ type (
     Output     io.WriteCloser
     // signature from the args
     Signature  []byte
-
     // private key specific stuff
     PrivateKeyGenerationFlags privateKeyGenerationFlags
+    // a certificate filled with the parameters
+    CertificateData certificateData
   }
 
   privateKeyGenerationFlags struct {
@@ -251,5 +261,86 @@ func (f *Flags) parseSignature() error {
   var err error
   f.Flags.Signature, err = base64.StdEncoding.DecodeString(f.flag_container.signature)
   if err != nil { return err }
+  return nil
+}
+
+// add the certificate fields to the flags
+func (f *Flags) AddCertificateFields() {
+  f.check_list = append(f.check_list, f.parseCertificateFields)
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.manual.serialNumber,
+    "serial", "1", "unique serial number of the CA");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.manual.commonName,
+    "common-name", "", "common name of the entity to certify");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.manual.dnsNames,
+    "dns-names", "", "comma separated list of alternative fqdn entries for the entity");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.manual.emailAddresses,
+    "email-address", "", "comma separated list of alternative email entries for the entity");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.manual.ipAddresses,
+    "ip-address", "", "comma separated list of alternative ip entries for the entity");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.automatic.Country,
+    "country", "", "comma separated list of countries the entitiy resides in");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.automatic.Organization,
+    "organization", "", "comma separated list of organizations the entity belongs to");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.automatic.OrganizationalUnit,
+    "organization-unit", "", "comma separated list of organization units or departments the entity belongs to");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.automatic.Locality,
+    "locality", "", "comma separated list of localities or cities the entity resides in");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.automatic.Province,
+    "province", "", "comma separated list of provinces the entity resides in");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.automatic.StreetAddress,
+    "street-address", "", "comma separated list of street addresses the entity resides in");
+  f.flagset.StringVar(
+    &f.flag_container.certificateFlags.automatic.PostalCode,
+    "postal-code", "", "comma separated list of postal codes of the localities");
+}
+
+// parse the certificate fields into a raw certificate
+func (f *Flags) parseCertificateFields() error {
+  f.Flags.CertificateData = certificateData{Subject: pkix.Name{}}
+  // convert the automatic flags
+  container_type := reflect.ValueOf(&f.flag_container.certificateFlags.automatic).Elem()
+  cert_data_type := reflect.ValueOf(&f.Flags.CertificateData.Subject).Elem()
+
+  for _, field := range []string{"Country", "Organization", "OrganizationalUnit",
+                                 "Locality", "Province", "StreetAddress", "PostalCode"} {
+    field_value := container_type.FieldByName(field).String()
+    if field_value == "" { continue }
+    target := cert_data_type.FieldByName(field)
+    target.Set(reflect.ValueOf(strings.Split(field_value, ",")))
+  }
+
+  // convert the manual flags
+  data     := &f.Flags.CertificateData
+  raw_data := f.flag_container.certificateFlags.manual
+  data.Subject.SerialNumber = raw_data.serialNumber
+  data.Subject.CommonName   = raw_data.commonName
+  if raw_data.dnsNames != "" {
+    data.DnsNames             = strings.Split(raw_data.dnsNames, ",")
+  }
+  if raw_data.emailAddresses != "" {
+    data.EmailAddresses       = strings.Split(raw_data.emailAddresses, ",")
+  }
+
+  if raw_data.ipAddresses == "" { return nil }
+  raw_ips := strings.Split(raw_data.ipAddresses, ",")
+  data.IpAddresses = make([]net.IP, len(raw_ips))
+  for i, ip := range raw_ips {
+    data.IpAddresses[i] = net.ParseIP(ip)
+    if data.IpAddresses[i] == nil {
+      return fmt.Errorf("'%s' is not a valid IP", ip)
+    }
+  }
+
   return nil
 }

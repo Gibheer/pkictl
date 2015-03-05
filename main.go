@@ -2,7 +2,10 @@ package main
 
 import (
   "crypto"
+  "crypto/rand"
+  "crypto/x509"
   "encoding/base64"
+  "encoding/pem"
   "fmt"
   "io"
   "io/ioutil"
@@ -25,7 +28,7 @@ func main() {
   case "create-public":    create_public_key()
   case "sign-input":       sign_input()
   case "verify-signature": verify_input()
-//  case "create-cert-sign": create_sign_request()
+  case "create-cert-sign": create_sign_request()
 //  case "sign-request":     sign_request()
   case "help":             print_modules()
 //  case "info":             info_on_file()
@@ -113,6 +116,22 @@ func verify_input() {
   }
   fmt.Println("invalid")
   os.Exit(1)
+}
+
+// create a certificate sign request
+func create_sign_request() {
+  fs := NewFlags("create-cert-sign")
+  fs.AddPrivateKey()
+  fs.AddOutput()
+  fs.AddCertificateFields()
+  fs.Parse(program_args())
+
+  csrt := fs.Flags.CertificateData.GenerateCSR()
+  csr, err := x509.CreateCertificateRequest(rand.Reader, csrt, fs.Flags.PrivateKey.PrivateKey())
+  if err != nil { crash_with_help(2, "Could not create certificate sign request: %s", err) }
+  pem_block := &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csr}
+  err = pem.Encode(fs.Flags.Output, pem_block)
+  if err != nil { crash_with_help(2, "Encoding didn't work: %s", err) }
 }
 
 // print the module help
