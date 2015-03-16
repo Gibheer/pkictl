@@ -2,13 +2,11 @@ package main
 
 import (
   "crypto"
-  "crypto/rand"
-  "crypto/x509"
   "encoding/base64"
-  "encoding/pem"
   "fmt"
   "io"
   "io/ioutil"
+  "math/big"
   "os"
   "path/filepath"
 
@@ -29,7 +27,7 @@ func main() {
   case "sign-input":       sign_input()
   case "verify-signature": verify_input()
   case "create-cert-sign": create_sign_request()
-//  case "sign-request":     sign_request()
+  case "create-cert":      create_cert()
   case "help":             print_modules()
 //  case "info":             info_on_file()
   default: crash_with_help(1, "Command not supported!")
@@ -126,12 +124,34 @@ func create_sign_request() {
   fs.AddCertificateFields()
   fs.Parse(program_args())
 
-  csrt := fs.Flags.CertificateData.GenerateCSR()
-  csr, err := x509.CreateCertificateRequest(rand.Reader, csrt, fs.Flags.PrivateKey.PrivateKey())
+  csr, err := fs.Flags.CertificateData.ToCertificateRequest(fs.Flags.PrivateKey)
   if err != nil { crash_with_help(2, "Could not create certificate sign request: %s", err) }
-  pem_block := &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csr}
-  err = pem.Encode(fs.Flags.Output, pem_block)
+  pem_block, err := csr.MarshalPem()
+  if err != nil { crash_with_help(2, "Could not covnert to pem: %s", err) }
+  _, err = pem_block.WriteTo(fs.Flags.Output)
   if err != nil { crash_with_help(2, "Encoding didn't work: %s", err) }
+}
+
+func create_cert() {
+  fs := NewFlags("create-cert")
+  fs.AddPrivateKey()
+  fs.AddCSR()
+  fs.AddOutput()
+  fs.Parse(program_args())
+
+  // TODO implement flags for all certificate options
+  cert_opts := pki.CertificateOptions{}
+  cert_opts.SerialNumber = big.NewInt(1)
+  cert, err := fs.Flags.CertificateSignRequest.ToCertificate(
+    fs.Flags.PrivateKey,
+    cert_opts,
+    nil,
+  )
+  if err != nil { crash_with_help(2, "Error generating certificate: %s", err) }
+  pem_block, err := cert.MarshalPem()
+  if err != nil { crash_with_help(2, "Error converting to pem: %s", err) }
+  _, err = pem_block.WriteTo(fs.Flags.Output)
+  if err != nil { crash_with_help(2, "Output didn't work: %s", err) }
 }
 
 // print the module help
@@ -143,7 +163,7 @@ where 'command' is one of:
     sign-input        sign a message with a private key
     verify-signature  verify a signature
     create-cert-sign  create a new certificate sign request
-    sign-request      sign a certificate request
+    create-cert       sign a certificate request
     help              show this help
     info              get info on a file
 `, filepath.Base(os.Args[0]))

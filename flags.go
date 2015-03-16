@@ -5,11 +5,12 @@ package main
 
 import (
   "crypto/elliptic"
-  "crypto/x509/pkix"
   "encoding/base64"
+  "encoding/pem"
   "flag"
   "fmt"
   "io"
+  "io/ioutil"
   "net"
   "os"
   "reflect"
@@ -76,7 +77,9 @@ type (
     // private key specific stuff
     PrivateKeyGenerationFlags privateKeyGenerationFlags
     // a certificate filled with the parameters
-    CertificateData certificateData
+    CertificateData *pki.CertificateData
+    // the certificate sign request
+    CertificateSignRequest *pki.CertificateRequest
   }
 
   privateKeyGenerationFlags struct {
@@ -172,6 +175,39 @@ func (f *Flags) parsePublicKey() error {
   pu, err := ReadPublicKeyFile(f.flag_container.publicKeyPath)
   if err != nil { return fmt.Errorf("Error reading public key: %s", err) }
   f.Flags.PublicKey = pu
+  return nil
+}
+
+// add flag to load certificate sign request
+func (f *Flags) AddCSR() {
+  f.check_list = append(f.check_list, f.parseCSR)
+  f.flagset.StringVar(&f.flag_container.signRequestPath, "csr-path", "", "path to the certificate sign request")
+}
+
+// parse the certificate sign request
+func (f *Flags) parseCSR() error {
+  rest, err := ioutil.ReadFile(f.flag_container.signRequestPath)
+  if err != nil { return fmt.Errorf("Error reading certificate sign request: %s", err) }
+
+  var csr_asn1 []byte
+  var block *pem.Block
+  for len(rest) > 0 {
+    block, rest = pem.Decode(rest)
+    if block.Type == "CERTIFICATE REQUEST" {
+      csr_asn1 = block.Bytes
+      break
+    }
+  }
+  if len(csr_asn1) == 0 {
+    return fmt.Errorf(
+      "No certificate sign request found in %s",
+      f.flag_container.signRequestPath,
+    )
+  }
+
+  csr, err := pki.LoadCertificateSignRequest(csr_asn1)
+  if err != nil { return fmt.Errorf("Invalid certificate sign request: %s", err) }
+  f.Flags.CertificateSignRequest = csr
   return nil
 }
 
@@ -307,7 +343,7 @@ func (f *Flags) AddCertificateFields() {
 
 // parse the certificate fields into a raw certificate
 func (f *Flags) parseCertificateFields() error {
-  f.Flags.CertificateData = certificateData{Subject: pkix.Name{}}
+  f.Flags.CertificateData = pki.NewCertificateData()
   // convert the automatic flags
   container_type := reflect.ValueOf(&f.flag_container.certificateFlags.automatic).Elem()
   cert_data_type := reflect.ValueOf(&f.Flags.CertificateData.Subject).Elem()
@@ -321,12 +357,12 @@ func (f *Flags) parseCertificateFields() error {
   }
 
   // convert the manual flags
-  data     := &f.Flags.CertificateData
+  data     := f.Flags.CertificateData
   raw_data := f.flag_container.certificateFlags.manual
   data.Subject.SerialNumber = raw_data.serialNumber
   data.Subject.CommonName   = raw_data.commonName
   if raw_data.dnsNames != "" {
-    data.DnsNames             = strings.Split(raw_data.dnsNames, ",")
+    data.DNSNames             = strings.Split(raw_data.dnsNames, ",")
   }
   if raw_data.emailAddresses != "" {
     data.EmailAddresses       = strings.Split(raw_data.emailAddresses, ",")
@@ -334,10 +370,10 @@ func (f *Flags) parseCertificateFields() error {
 
   if raw_data.ipAddresses == "" { return nil }
   raw_ips := strings.Split(raw_data.ipAddresses, ",")
-  data.IpAddresses = make([]net.IP, len(raw_ips))
+  data.IPAddresses = make([]net.IP, len(raw_ips))
   for i, ip := range raw_ips {
-    data.IpAddresses[i] = net.ParseIP(ip)
-    if data.IpAddresses[i] == nil {
+    data.IPAddresses[i] = net.ParseIP(ip)
+    if data.IPAddresses[i] == nil {
       return fmt.Errorf("'%s' is not a valid IP", ip)
     }
   }
