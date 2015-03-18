@@ -29,6 +29,7 @@ func main() {
   case "create-cert-sign": create_sign_request()
   case "create-cert":      create_cert()
   case "help":             print_modules()
+  case "--help":             print_modules()
 //  case "info":             info_on_file()
   default: crash_with_help(1, "Command not supported!")
   }
