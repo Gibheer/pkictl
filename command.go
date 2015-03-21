@@ -1,6 +1,5 @@
+// Handler to make management of subcommands easier.
 package main
-
-// handle the command infrastructure
 
 import (
   "fmt"
@@ -14,13 +13,14 @@ type (
     Short string // a short description  to display
     Long  string // a long help text
     Example string // an example string
-    Run   func(*Command, []string)
+    Run   func(*Command, []string) // the command to run
 
-    flagSet *flag.FlagSet
-    commands []*Command
+    flagSet *flag.FlagSet // internal flagset with all flags
+    commands []*Command   // the list of subcommands
   }
 )
 
+// This function adds a new sub command.
 func (c *Command) AddCommand(cmds... *Command) {
   res := c.commands
   for _, cmd := range cmds {
@@ -29,6 +29,7 @@ func (c *Command) AddCommand(cmds... *Command) {
   c.commands = res
 }
 
+// Evaluate the arguments and call either the subcommand or parse it as flags.
 func (c *Command) eval(args []string) error {
   var name string = ""
   var rest []string = []string{}
@@ -59,15 +60,20 @@ func (c *Command) eval(args []string) error {
   return nil
 }
 
+// Execute the command. It will fetch os.Args[1:] itself.
 func (c *Command) Execute() error {
   return c.eval(os.Args[1:])
 }
 
+// Return the flagset currently in use.
 func (c *Command) Flags() *flag.FlagSet {
-  if c.flagSet == nil { c.flagSet = flag.NewFlagSet(c.Use, flag.ContinueOnError) }
+  if c.flagSet == nil {
+    c.flagSet = flag.NewFlagSet(c.Use, flag.ContinueOnError)
+  }
   return c.flagSet
 }
 
+// Print the help for the current command or a subcommand.
 func (c *Command) Help(args []string) {
   if len(args) > 0 {
     for _, cmd := range c.commands {
@@ -81,6 +87,7 @@ func (c *Command) Help(args []string) {
   c.Usage()
 }
 
+// Print the usage information.
 func (c *Command) Usage() {
   usage := ""
   if c.Use != "" {
