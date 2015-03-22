@@ -8,7 +8,6 @@ import (
   "io/ioutil"
   "math/big"
   "os"
-//  "path/filepath"
 
   "github.com/gibheer/pki"
 )
