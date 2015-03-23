@@ -29,7 +29,7 @@ var (
 
 type (
   // holds all certificate related flags, which need parsing afterwards
-  certFlagsContainer struct {
+  certiticateRequestRawFlags struct {
     manual struct {
       serialNumber   string // the serial number for the cert
       commonName     string // the common name used in the cert
@@ -57,7 +57,7 @@ type (
     privateKeyPath   string // path to the private key
     publicKeyPath    string // path to the public key
     signRequestPath  string // path to the certificate sign request
-    certificateFlags certFlagsContainer // container for certificate related flags
+    certificateFlags certiticateRequestRawFlags // container for certificate related flags
     signature        string // a base64 encoded signature
   }
 
