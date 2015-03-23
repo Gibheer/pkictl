@@ -141,7 +141,7 @@ certificate requests and certificates and sign/verify messages.`,
   // private key specific stuff
   FlagPrivateKeyGeneration privateKeyGenerationFlags
   // a certificate filled with the parameters
-  FlagCertificateData *pki.CertificateData
+  FlagCertificateRequestData *pki.CertificateData
   // the certificate sign request
   FlagCertificateSignRequest *pki.CertificateRequest
 )
@@ -392,10 +392,10 @@ func InitFlagCertificateFields(cmd *Command) {
 
 // parse the certificate fields into a raw certificate
 func checkCertificateFields() error {
-  FlagCertificateData = pki.NewCertificateData()
+  FlagCertificateRequestData = pki.NewCertificateData()
   // convert the automatic flags
   container_type := reflect.ValueOf(&flagContainer.certificateFlags.automatic).Elem()
-  cert_data_type := reflect.ValueOf(&FlagCertificateData.Subject).Elem()
+  cert_data_type := reflect.ValueOf(&FlagCertificateRequestData.Subject).Elem()
 
   for _, field := range []string{"Country", "Organization", "OrganizationalUnit",
                                  "Locality", "Province", "StreetAddress", "PostalCode"} {
@@ -406,7 +406,7 @@ func checkCertificateFields() error {
   }
 
   // convert the manual flags
-  data     := FlagCertificateData
+  data     := FlagCertificateRequestData
   raw_data := flagContainer.certificateFlags.manual
   data.Subject.SerialNumber = raw_data.serialNumber
   data.Subject.CommonName   = raw_data.commonName

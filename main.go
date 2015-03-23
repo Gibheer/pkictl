@@ -110,7 +110,7 @@ func create_sign_request(cmd *Command, args []string) {
     crash_with_help(cmd, ErrorFlagInput, "Flags invalid: %s", err)
   }
 
-  csr, err := FlagCertificateData.ToCertificateRequest(FlagPrivateKey)
+  csr, err := FlagCertificateRequestData.ToCertificateRequest(FlagPrivateKey)
   if err != nil { crash_with_help(cmd, ErrorProgram, "Could not create certificate sign request: %s", err) }
   pem_block, err := csr.MarshalPem()
   if err != nil { crash_with_help(cmd, ErrorProgram, "Error when marshalling to pem: %s", err) }
