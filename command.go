@@ -51,7 +51,7 @@ func (c *Command) eval(args []string) error {
       return cmd.eval(rest)
     }
   }
-  if err := c.Flags().Parse(rest); err != nil { return err }
+  if err := c.Flags().Parse(args); err != nil { return err }
   if c.Run != nil {
     c.Run(c, rest)
   } else {
