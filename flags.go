@@ -10,10 +10,12 @@ import (
   "fmt"
   "io"
   "io/ioutil"
+  "math/big"
   "net"
   "os"
   "reflect"
   "strings"
+  "time"
 
   "github.com/gibheer/pki"
 )
@@ -59,12 +61,21 @@ type (
     signRequestPath  string // path to the certificate sign request
     certificateFlags certiticateRequestRawFlags // container for certificate related flags
     signature        string // a base64 encoded signature
+    certGeneration   certGenerationRaw
   }
 
   privateKeyGenerationFlags struct {
     Type string // type of the private key (rsa, ecdsa)
     Curve elliptic.Curve // curve for ecdsa
     Size  int            // bitsize for rsa
+  }
+
+  certGenerationRaw struct {
+    serial    int64
+    notBefore string
+    notAfter  string
+    isCA      bool
+    length    int
   }
 
   flagCheck func()(error)
@@ -144,6 +155,8 @@ certificate requests and certificates and sign/verify messages.`,
   FlagCertificateRequestData *pki.CertificateData
   // the certificate sign request
   FlagCertificateSignRequest *pki.CertificateRequest
+  // certificate specific creation stuff
+  FlagCertificateGeneration pki.CertificateOptions
 )
 
 func InitFlags() {
@@ -179,6 +192,7 @@ func InitFlags() {
   // create-certificate
   InitFlagPrivateKey(CmdCreateCert)
   InitFlagOutput(CmdCreateCert)
+  InitFlagCert(CmdCreateCert)
   InitFlagCSR(CmdCreateCert)
 }
 
@@ -231,6 +245,54 @@ func checkPublicKey() error {
   if err != nil { return fmt.Errorf("Error reading public key: %s", err) }
   FlagPublicKey = pu
   return nil
+}
+
+// add flag to load certificate flags
+func InitFlagCert(cmd *Command) {
+  cmd.Flags().Int64Var(&flagContainer.certGeneration.serial, "serial", 0, "serial number of all certificates")
+  cmd.Flags().BoolVar(&flagContainer.certGeneration.isCA, "ca", false, "check if the resulting certificate is a ca")
+  cmd.Flags().IntVar(
+    &flagContainer.certGeneration.
+    length,
+    "length",
+    0,
+    "the number of certificates allowed in the chain between this cert and the end certificate",
+  )
+  cmd.Flags().StringVar(
+    &flagContainer.certGeneration.notBefore,
+    "not-before",
+    time.Now().Format(time.RFC3339),
+    "time before the certificate is not valid in RFC3339 format (default now)",
+  )
+  cmd.Flags().StringVar(
+    &flagContainer.certGeneration.
+    notAfter,
+    "not-after",
+    time.Now().Add(time.Duration(180 * 24 * time.Hour)).Format(time.RFC3339),
+    "time after which the certificate is not valid in RFC3339 format (default now + 180 days)",
+  )
+}
+
+// parse the certificate data
+func checkCertFlags() error {
+  FlagCertificateGeneration.IsCA = flagContainer.certGeneration.isCA
+  FlagCertificateGeneration.CALength = flagContainer.certGeneration.length
+  FlagCertificateGeneration.SerialNumber = big.NewInt(flagContainer.certGeneration.serial)
+
+  var err error
+  if notbefore := flagContainer.certGeneration.notBefore; notbefore != "" {
+    FlagCertificateGeneration.NotBefore, err = parseTimeRFC3339(notbefore)
+    if err != nil { return err }
+  }
+  if notafter := flagContainer.certGeneration.notAfter; notafter != "" {
+    FlagCertificateGeneration.NotAfter, err = parseTimeRFC3339(notafter)
+    if err != nil { return err }
+  }
+  return nil
+}
+
+func parseTimeRFC3339(tr string) (time.Time, error) {
+  return time.Parse(time.RFC3339, tr)
 }
 
 // add flag to load certificate sign request

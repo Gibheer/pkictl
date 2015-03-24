@@ -6,7 +6,6 @@ import (
   "fmt"
   "io"
   "io/ioutil"
-  "math/big"
   "os"
 
   "github.com/gibheer/pki"
@@ -119,17 +118,15 @@ func create_sign_request(cmd *Command, args []string) {
 }
 
 func create_cert(cmd *Command, args []string) {
-  err := checkFlags(checkPrivateKey, checkOutput, checkCSR)
+  err := checkFlags(checkPrivateKey, checkOutput, checkCSR, checkCertFlags)
   if err != nil {
     crash_with_help(cmd, ErrorFlagInput, "Flags invalid: %s", err)
   }
 
   // TODO implement flags for all certificate options
-  cert_opts := pki.CertificateOptions{}
-  cert_opts.SerialNumber = big.NewInt(1)
   cert, err := FlagCertificateSignRequest.ToCertificate(
     FlagPrivateKey,
-    cert_opts,
+    FlagCertificateGeneration,
     nil,
   )
   if err != nil { crash_with_help(cmd, ErrorProgram, "Error generating certificate: %s", err) }
