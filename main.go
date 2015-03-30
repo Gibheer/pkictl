@@ -117,31 +117,6 @@ func create_sign_request(cmd *Command, args []string) {
 	}
 }
 
-func create_cert(cmd *Command, args []string) {
-	err := checkFlags(checkPrivateKey, checkOutput, checkCSR, checkCertFlags)
-	if err != nil {
-		crash_with_help(cmd, ErrorFlagInput, "Flags invalid: %s", err)
-	}
-
-	// TODO implement flags for all certificate options
-	cert, err := FlagCertificateSignRequest.ToCertificate(
-		FlagPrivateKey,
-		FlagCertificateGeneration,
-		nil,
-	)
-	if err != nil {
-		crash_with_help(cmd, ErrorProgram, "Error generating certificate: %s", err)
-	}
-	pem_block, err := cert.MarshalPem()
-	if err != nil {
-		crash_with_help(cmd, ErrorProgram, "Error when marshalling to pem: %s", err)
-	}
-	_, err = pem_block.WriteTo(FlagOutput)
-	if err != nil {
-		crash_with_help(cmd, ErrorProgram, "Could not write to output: %s", err)
-	}
-}
-
 // crash and provide a helpful message
 func crash_with_help(cmd *Command, code int, message string, args ...interface{}) {
 	fmt.Fprintf(os.Stderr, message+"\n", args...)
