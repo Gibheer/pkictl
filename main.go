@@ -26,35 +26,6 @@ func main() {
 	CmdRoot.Execute()
 }
 
-// create a new private key
-func create_private_key(cmd *Command, args []string) {
-	err := checkFlags(checkOutput, checkPrivateKeyGeneration)
-	if err != nil {
-		crash_with_help(cmd, ErrorFlagInput, "Flags invalid: %s", err)
-	}
-
-	var pk pki.Pemmer
-	switch FlagPrivateKeyGeneration.Type {
-	case "ecdsa":
-		pk, err = pki.NewPrivateKeyEcdsa(FlagPrivateKeyGeneration.Curve)
-	case "rsa":
-		pk, err = pki.NewPrivateKeyRsa(FlagPrivateKeyGeneration.Size)
-	default:
-		crash_with_help(cmd, ErrorInput, "Unknown private key type '%s'", FlagPrivateKeyGeneration.Type)
-	}
-	if err != nil {
-		crash_with_help(cmd, ErrorProgram, "Error creating private key: %s", err)
-	}
-	marsh_pem, err := pk.MarshalPem()
-	if err != nil {
-		crash_with_help(cmd, ErrorProgram, "Error when marshalling to pem: %s", err)
-	}
-	_, err = marsh_pem.WriteTo(FlagOutput)
-	if err != nil {
-		crash_with_help(cmd, ErrorProgram, "Error when writing output: %s", err)
-	}
-}
-
 // create a public key derived from a private key
 func create_public_key(cmd *Command, args []string) {
 	err := checkFlags(checkPrivateKey, checkOutput)

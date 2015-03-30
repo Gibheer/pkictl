@@ -21,14 +21,7 @@ import (
 	"github.com/gibheer/pki"
 )
 
-const (
-	RsaLowerLength = 2048
-	RsaUpperLength = 16384
-)
-
 var (
-	// the possible ecdsa curves allowed to be used
-	EcdsaCurves = []int{224, 256, 384, 521}
 	// the possible valid key usages to check against the commandline
 	ValidKeyUsages = map[string]x509.KeyUsage{
 		"digitalsignature":  x509.KeyUsageDigitalSignature,
@@ -94,12 +87,6 @@ type (
 		certificatePath  string                     // path to a certificate
 	}
 
-	privateKeyGenerationFlags struct {
-		Type  string         // type of the private key (rsa, ecdsa)
-		Curve elliptic.Curve // curve for ecdsa
-		Size  int            // bitsize for rsa
-	}
-
 	certGenerationRaw struct {
 		serial      int64
 		notBefore   string
@@ -119,14 +106,6 @@ var (
 		Short: "A tool to manage keys and certificates.",
 		Long: `This tool provides a way to manage private and public keys, create
 certificate requests and certificates and sign/verify messages.`,
-	}
-
-	CmdCreatePrivateKey = &Command{
-		Use:     "create-private",
-		Short:   "create a private key",
-		Long:    "Create an ecdsa or rsa key with this command",
-		Example: "create-private -type=ecdsa -length=521",
-		Run:     create_private_key,
 	}
 
 	CmdCreatePublicKey = &Command{
@@ -182,8 +161,6 @@ certificate requests and certificates and sign/verify messages.`,
 	FlagOutput io.WriteCloser
 	// signature from the args
 	FlagSignature []byte
-	// private key specific stuff
-	FlagPrivateKeyGeneration privateKeyGenerationFlags
 	// a certificate filled with the parameters
 	FlagCertificateRequestData *pki.CertificateData
 	// the certificate sign request
@@ -235,39 +212,6 @@ func checkFlags(checks ...flagCheck) error {
 			return err
 		}
 	}
-	return nil
-}
-
-//// print a message with the usage part
-//func (f *Flags) Usagef(message string, args ...interface{}) {
-//  fmt.Fprintf(os.Stderr, "error: " + message + "\n", args...)
-//  f.flagset.Flags().Usage()
-//}
-
-// add the private key option to the requested flags
-func InitFlagPrivateKey(cmd *Command) {
-	cmd.Flags().StringVar(&flagContainer.privateKeyPath, "private-key", "", "path to the private key (required)")
-}
-
-// check the private key flag and load the private key
-func checkPrivateKey() error {
-	if flagContainer.privateKeyPath == "" {
-		return fmt.Errorf("No private key given!")
-	}
-	// check permissions of private key file
-	info, err := os.Stat(flagContainer.privateKeyPath)
-	if err != nil {
-		return fmt.Errorf("Error reading private key: %s", err)
-	}
-	if info.Mode().Perm().String()[4:] != "------" {
-		return fmt.Errorf("private key file modifyable by others!")
-	}
-
-	pk, err := ReadPrivateKeyFile(flagContainer.privateKeyPath)
-	if err != nil {
-		return fmt.Errorf("Error reading private key: %s", err)
-	}
-	FlagPrivateKey = pk
 	return nil
 }
 
@@ -450,47 +394,6 @@ func checkInput() error {
 	FlagInput, err = os.Open(flagContainer.inputPath)
 	if err != nil {
 		return err
-	}
-	return nil
-}
-
-// This function adds the private key generation flags.
-func InitFlagPrivateKeyGeneration(cmd *Command) {
-	cmd.Flags().StringVar(&flagContainer.cryptType, "type", "ecdsa", "the type of the private key (ecdsa, rsa)")
-	cmd.Flags().IntVar(
-		&flagContainer.length,
-		"length", 521,
-		fmt.Sprintf("%d - %d for rsa; one of %v for ecdsa", RsaLowerLength, RsaUpperLength, EcdsaCurves),
-	)
-}
-
-// check the private key generation variables and move them to the work space
-func checkPrivateKeyGeneration() error {
-	pk_type := flagContainer.cryptType
-	FlagPrivateKeyGeneration.Type = pk_type
-	switch pk_type {
-	case "ecdsa":
-		switch flagContainer.length {
-		case 224:
-			FlagPrivateKeyGeneration.Curve = elliptic.P224()
-		case 256:
-			FlagPrivateKeyGeneration.Curve = elliptic.P256()
-		case 384:
-			FlagPrivateKeyGeneration.Curve = elliptic.P384()
-		case 521:
-			FlagPrivateKeyGeneration.Curve = elliptic.P521()
-		default:
-			return fmt.Errorf("Curve %d unknown!", flagContainer.length)
-		}
-	case "rsa":
-		size := flagContainer.length
-		if RsaLowerLength <= size && size <= RsaUpperLength {
-			FlagPrivateKeyGeneration.Size = size
-		} else {
-			return fmt.Errorf("Length of %d is not allowed for rsa!", size)
-		}
-	default:
-		return fmt.Errorf("Type %s is unknown!", pk_type)
 	}
 	return nil
 }
