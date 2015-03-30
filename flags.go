@@ -27,7 +27,9 @@ const (
 )
 
 var (
-	EcdsaCurves    = []int{224, 256, 384, 521}
+	// the possible ecdsa curves allowed to be used
+	EcdsaCurves = []int{224, 256, 384, 521}
+	// the possible valid key usages to check against the commandline
 	ValidKeyUsages = map[string]x509.KeyUsage{
 		"digitalsignature":  x509.KeyUsageDigitalSignature,
 		"contentcommitment": x509.KeyUsageContentCommitment,
@@ -38,6 +40,21 @@ var (
 		"crlsign":           x509.KeyUsageCRLSign,
 		"encipheronly":      x509.KeyUsageEncipherOnly,
 		"decipheronly":      x509.KeyUsageDecipherOnly,
+	}
+	// the valid extended key usages, to check against the commandline
+	ValidExtKeyUsages = map[string]x509.ExtKeyUsage{
+		"any":                        x509.ExtKeyUsageAny,
+		"serverauth":                 x509.ExtKeyUsageServerAuth,
+		"clientauth":                 x509.ExtKeyUsageClientAuth,
+		"codesigning":                x509.ExtKeyUsageCodeSigning,
+		"emailprotection":            x509.ExtKeyUsageEmailProtection,
+		"ipsecendsystem":             x509.ExtKeyUsageIPSECEndSystem,
+		"ipsectunnel":                x509.ExtKeyUsageIPSECTunnel,
+		"ipsecuser":                  x509.ExtKeyUsageIPSECUser,
+		"timestamping":               x509.ExtKeyUsageTimeStamping,
+		"ocspsigning":                x509.ExtKeyUsageOCSPSigning,
+		"microsoftservergatedcrypto": x509.ExtKeyUsageMicrosoftServerGatedCrypto,
+		"netscapeservergatedcrypto":  x509.ExtKeyUsageNetscapeServerGatedCrypto,
 	}
 )
 
@@ -84,13 +101,14 @@ type (
 	}
 
 	certGenerationRaw struct {
-		serial    int64
-		notBefore string
-		notAfter  string
-		isCA      bool
-		length    int
-		caPath    string // path to the ca file if isCA is false
-		keyUsage  string // comma separated list of key usages
+		serial      int64
+		notBefore   string
+		notAfter    string
+		isCA        bool
+		length      int
+		caPath      string // path to the ca file if isCA is false
+		keyUsage    string // comma separated list of key usages
+		extKeyUsage string // comma separated list of extended key usages
 	}
 
 	flagCheck func() error
@@ -297,9 +315,13 @@ func InitFlagCert(cmd *Command) {
 	)
 	cmd.Flags().StringVar(
 		&flagContainer.certGeneration.keyUsage,
-		"key-usage",
-		"",
+		"key-usage", "",
 		"comma separated list of key usages",
+	)
+	cmd.Flags().StringVar(
+		&flagContainer.certGeneration.extKeyUsage,
+		"ext-key-usage", "",
+		"comma separated list of extended key usage flags",
 	)
 }
 
@@ -334,6 +356,19 @@ func checkCertFlags() error {
 			}
 		}
 		FlagCertificateGeneration.KeyUsage = keyUresult
+	}
+	// parse the extended key usage flags
+	if eKeyUstr := flagContainer.certGeneration.extKeyUsage; eKeyUstr != "" {
+		eKeyUarr := strings.Split(eKeyUstr, ",")
+		eKeyUResult := make([]x509.ExtKeyUsage, 0)
+		for _, usage := range eKeyUarr {
+			if value, ok := ValidExtKeyUsages[strings.ToLower(usage)]; ok {
+				eKeyUResult = append(eKeyUResult, value)
+			} else {
+				return fmt.Errorf("unsupported extended key usage '%s'", usage)
+			}
+		}
+		FlagCertificateGeneration.KeyExtendedUsage = eKeyUResult
 	}
 	return nil
 }
