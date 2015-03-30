@@ -5,6 +5,7 @@ package main
 
 import (
 	"crypto/elliptic"
+	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
 	"fmt"
@@ -26,7 +27,18 @@ const (
 )
 
 var (
-	EcdsaCurves = []int{224, 256, 384, 521}
+	EcdsaCurves    = []int{224, 256, 384, 521}
+	ValidKeyUsages = map[string]x509.KeyUsage{
+		"digitalsignature":  x509.KeyUsageDigitalSignature,
+		"contentcommitment": x509.KeyUsageContentCommitment,
+		"keyencipherment":   x509.KeyUsageKeyEncipherment,
+		"dataencipherment":  x509.KeyUsageDataEncipherment,
+		"keyagreement":      x509.KeyUsageKeyAgreement,
+		"certsign":          x509.KeyUsageCertSign,
+		"crlsign":           x509.KeyUsageCRLSign,
+		"encipheronly":      x509.KeyUsageEncipherOnly,
+		"decipheronly":      x509.KeyUsageDecipherOnly,
+	}
 )
 
 type (
@@ -61,7 +73,8 @@ type (
 		signRequestPath  string                     // path to the certificate sign request
 		certificateFlags certiticateRequestRawFlags // container for certificate related flags
 		signature        string                     // a base64 encoded signature
-		certGeneration   certGenerationRaw
+		certGeneration   certGenerationRaw          // all certificate generation flags
+		certificatePath  string                     // path to a certificate
 	}
 
 	privateKeyGenerationFlags struct {
@@ -76,6 +89,8 @@ type (
 		notAfter  string
 		isCA      bool
 		length    int
+		caPath    string // path to the ca file if isCA is false
+		keyUsage  string // comma separated list of key usages
 	}
 
 	flagCheck func() error
@@ -275,11 +290,16 @@ func InitFlagCert(cmd *Command) {
 		"time before the certificate is not valid in RFC3339 format (default now)",
 	)
 	cmd.Flags().StringVar(
-		&flagContainer.certGeneration.
-			notAfter,
+		&flagContainer.certGeneration.notAfter,
 		"not-after",
 		time.Now().Add(time.Duration(180*24*time.Hour)).Format(time.RFC3339),
 		"time after which the certificate is not valid in RFC3339 format (default now + 180 days)",
+	)
+	cmd.Flags().StringVar(
+		&flagContainer.certGeneration.keyUsage,
+		"key-usage",
+		"",
+		"comma separated list of key usages",
 	)
 }
 
@@ -301,6 +321,19 @@ func checkCertFlags() error {
 		if err != nil {
 			return err
 		}
+	}
+	// parse the key usage string
+	if keyUstr := flagContainer.certGeneration.keyUsage; keyUstr != "" {
+		keyUarr := strings.Split(keyUstr, ",")
+		var keyUresult x509.KeyUsage
+		for _, usage := range keyUarr {
+			if value, ok := ValidKeyUsages[strings.ToLower(usage)]; ok {
+				keyUresult = keyUresult | value
+			} else {
+				return fmt.Errorf("unsupported key usage '%s'", usage)
+			}
+		}
+		FlagCertificateGeneration.KeyUsage = keyUresult
 	}
 	return nil
 }
