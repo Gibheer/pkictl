@@ -1,7 +1,11 @@
 package main
 
 import (
+	"crypto/elliptic"
 	"errors"
+	"fmt"
+	"os"
+
 	"github.com/gibheer/pki"
 )
 
