@@ -85,6 +85,7 @@ type (
 		caPath      string // path to the ca file if isCA is false
 		keyUsage    string // comma separated list of key usages
 		extKeyUsage string // comma separated list of extended key usages
+		crlUrl      string // comma separated list of crl urls
 	}
 )
 
@@ -120,6 +121,11 @@ func InitFlagCert(cmd *Command) {
 		&flagContainer.certGeneration.extKeyUsage,
 		"ext-key-usage", "",
 		"comma separated list of extended key usage flags",
+	)
+	cmd.Flags().StringVar(
+		&flagContainer.certGeneration.crlUrl,
+		"crl-url", "",
+		"comma separated list where crl lists can be found",
 	)
 }
 
@@ -168,7 +174,21 @@ func checkCertFlags() error {
 			return err
 		}
 	}
-	// parse the key usage string
+
+	if err := convertCertKeyUsage(); err != nil {
+		return err
+	}
+	if err := convertCertExtKeyUsage(); err != nil {
+		return err
+	}
+	if err := convertCertCrlUrl(); err != nil {
+		return err
+	}
+	return nil
+}
+
+// parse the key usage string
+func convertCertKeyUsage() error {
 	if keyUstr := flagContainer.certGeneration.keyUsage; keyUstr != "" {
 		keyUarr := strings.Split(keyUstr, ",")
 		var keyUresult x509.KeyUsage
@@ -181,7 +201,11 @@ func checkCertFlags() error {
 		}
 		FlagCertificateGeneration.KeyUsage = keyUresult
 	}
-	// parse the extended key usage flags
+	return nil
+}
+
+// parse the extended key usage flags
+func convertCertExtKeyUsage() error {
 	if eKeyUstr := flagContainer.certGeneration.extKeyUsage; eKeyUstr != "" {
 		eKeyUarr := strings.Split(eKeyUstr, ",")
 		eKeyUResult := make([]x509.ExtKeyUsage, 0)
@@ -193,6 +217,14 @@ func checkCertFlags() error {
 			}
 		}
 		FlagCertificateGeneration.KeyExtendedUsage = eKeyUResult
+	}
+	return nil
+}
+
+// parse the crl urls
+func convertCertCrlUrl() error {
+	if str := flagContainer.certGeneration.crlUrl; str != "" {
+		FlagCertificateGeneration.CRLUrls = strings.Split(str, ",")
 	}
 	return nil
 }
