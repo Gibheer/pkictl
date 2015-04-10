@@ -153,7 +153,6 @@ func create_cert(cmd *Command, args []string) {
 		crash_with_help(cmd, ErrorFlagInput, "Usage of 'is-ca' and 'ca' is invalid.")
 	}
 
-	// TODO implement flags for all certificate options
 	if err != nil {
 		crash_with_help(cmd, ErrorProgram, "Error generating certificate: %s", err)
 	}
