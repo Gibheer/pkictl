@@ -28,7 +28,7 @@ type (
 		certificateFlags certiticateRequestRawFlags // container for certificate related flags
 		signature        string                     // a base64 encoded signature
 		certGeneration   certGenerationRaw          // all certificate generation flags
-		certificatePath  string                     // path to a certificate
+		caPath           string                     // path to a certificate authority
 	}
 
 	flagCheck func() error
@@ -90,6 +90,8 @@ certificate requests and certificates and sign/verify messages.`,
 	FlagCertificateRequestData *pki.CertificateData
 	// the certificate sign request
 	FlagCertificateSignRequest *pki.CertificateRequest
+	// the ca/certificate to use
+	FlagCertificate *pki.Certificate
 )
 
 func InitFlags() {
@@ -123,12 +125,14 @@ func InitFlags() {
 	InitFlagOutput(CmdCreateSignRequest)
 	InitFlagCertificateFields(CmdCreateSignRequest)
 	// create-certificate
-	InitFlagPrivateKey(CmdCreateCert)
-	InitFlagOutput(CmdCreateCert)
+	InitFlagCA(CmdCreateCert)
 	InitFlagCert(CmdCreateCert)
 	InitFlagCSR(CmdCreateCert)
+	InitFlagOutput(CmdCreateCert)
+	InitFlagPrivateKey(CmdCreateCert)
 }
 
+// check if all checks are successful
 func checkFlags(checks ...flagCheck) error {
 	for _, check := range checks {
 		if err := check(); err != nil {
@@ -136,6 +140,23 @@ func checkFlags(checks ...flagCheck) error {
 		}
 	}
 	return nil
+}
+
+// check if either of the inserted checks is successful
+func checkFlagsEither(checks ...flagCheck) flagCheck {
+	return func() error {
+		errors := make([]error, 0)
+		for _, check := range checks {
+			if err := check(); err != nil {
+				errors = append(errors, err)
+			}
+		}
+		// it is a success, if any check is successful
+		if len(checks)-len(errors) > 0 {
+			return nil
+		}
+		return errors[0]
+	}
 }
 
 // add the public key flag

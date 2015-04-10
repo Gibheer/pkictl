@@ -47,7 +47,7 @@ var (
 		Use:     "create-cert",
 		Short:   "create a certificate from a sign request",
 		Long:    "Create a certificate based on a certificate sign request.",
-		Example: "create-cert -private-key=foo.ecdsa -csr-path=foo.csr",
+		Example: "create-cert -private-key=foo.ecdsa -csr=foo.csr",
 		Run:     create_cert,
 	}
 	// certificate specific creation stuff
@@ -92,7 +92,7 @@ type (
 // add flag to load certificate flags
 func InitFlagCert(cmd *Command) {
 	cmd.Flags().Int64Var(&flagContainer.certGeneration.serial, "serial", 0, "serial number of all certificates")
-	cmd.Flags().BoolVar(&flagContainer.certGeneration.isCA, "ca", false, "check if the resulting certificate is a ca")
+	cmd.Flags().BoolVar(&flagContainer.certGeneration.isCA, "is-ca", false, "check if the resulting certificate should be a ca")
 	cmd.Flags().IntVar(
 		&flagContainer.certGeneration.
 			length,
@@ -131,17 +131,29 @@ func InitFlagCert(cmd *Command) {
 
 // create a certificate
 func create_cert(cmd *Command, args []string) {
-	err := checkFlags(checkPrivateKey, checkOutput, checkCSR, checkCertFlags)
+	err := checkFlags(checkPrivateKey, checkOutput, checkCSR, checkCertFlags, checkFlagsEither(checkIsCA, checkCA))
 	if err != nil {
 		crash_with_help(cmd, ErrorFlagInput, "Flags invalid: %s", err)
 	}
 
+	var cert *pki.Certificate
+	if FlagCertificateGeneration.IsCA && FlagCertificate == nil {
+		cert, err = FlagCertificateSignRequest.ToCertificate(
+			FlagPrivateKey,
+			FlagCertificateGeneration,
+			nil,
+		)
+	} else if !FlagCertificateGeneration.IsCA && FlagCertificate != nil {
+		cert, err = FlagCertificateSignRequest.ToCertificate(
+			FlagPrivateKey,
+			FlagCertificateGeneration,
+			FlagCertificate,
+		)
+	} else {
+		crash_with_help(cmd, ErrorFlagInput, "Usage of 'is-ca' and 'ca' is invalid.")
+	}
+
 	// TODO implement flags for all certificate options
-	cert, err := FlagCertificateSignRequest.ToCertificate(
-		FlagPrivateKey,
-		FlagCertificateGeneration,
-		nil,
-	)
 	if err != nil {
 		crash_with_help(cmd, ErrorProgram, "Error generating certificate: %s", err)
 	}
@@ -187,6 +199,14 @@ func checkCertFlags() error {
 	return nil
 }
 
+// check if the flag is enabled to make the certificate a ca
+func checkIsCA() error {
+	if FlagCertificateGeneration.IsCA {
+		return nil
+	}
+	return fmt.Errorf("Not selected to be a CA")
+}
+
 // parse the key usage string
 func convertCertKeyUsage() error {
 	if keyUstr := flagContainer.certGeneration.keyUsage; keyUstr != "" {
@@ -229,9 +249,42 @@ func convertCertCrlUrl() error {
 	return nil
 }
 
+// add flag to load a certificate
+func InitFlagCA(cmd *Command) {
+	cmd.Flags().StringVar(&flagContainer.caPath, "ca", "", "path to the certificate authority")
+}
+
+// parse the certificate authority
+func checkCA() error {
+	rest, err := ioutil.ReadFile(flagContainer.caPath)
+	if err != nil {
+		return fmt.Errorf("Error reading certificate authority: %s", err)
+	}
+
+	var ca_asn1 []byte
+	var block *pem.Block
+	for len(rest) > 0 {
+		block, rest = pem.Decode(rest)
+		if block != nil && block.Type == pki.PemLabelCertificate {
+			ca_asn1 = block.Bytes
+			break
+		}
+	}
+	if len(ca_asn1) == 0 {
+		return fmt.Errorf("No certificate in '%s' found.", flagContainer.caPath)
+	}
+
+	ca, err := pki.LoadCertificate(ca_asn1)
+	if err != nil {
+		return fmt.Errorf("Invalid certificate: %s", err)
+	}
+	FlagCertificate = ca
+	return nil
+}
+
 // add flag to load certificate sign request
 func InitFlagCSR(cmd *Command) {
-	cmd.Flags().StringVar(&flagContainer.signRequestPath, "csr-path", "", "path to the certificate sign request")
+	cmd.Flags().StringVar(&flagContainer.signRequestPath, "csr", "", "path to the certificate sign request")
 }
 
 // parse the certificate sign request
@@ -245,7 +298,7 @@ func checkCSR() error {
 	var block *pem.Block
 	for len(rest) > 0 {
 		block, rest = pem.Decode(rest)
-		if block.Type == "CERTIFICATE REQUEST" {
+		if block.Type == pki.PemLabelCertificateRequest {
 			csr_asn1 = block.Bytes
 			break
 		}
