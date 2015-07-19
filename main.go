@@ -74,7 +74,7 @@ func sign_input(cmd *Command, args []string) {
 
 // verify a message using a signature and a public key
 func verify_input(cmd *Command, args []string) {
-	err := checkFlags(checkPrivateKey, checkInput, checkOutput, checkSignature)
+	err := checkFlags(checkPublicKey, checkInput, checkOutput, checkSignature)
 	if err != nil {
 		crash_with_help(cmd, ErrorFlagInput, "Flags invalid: %s", err)
 	}

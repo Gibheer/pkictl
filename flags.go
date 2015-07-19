@@ -117,7 +117,7 @@ func InitFlags() {
 	InitFlagOutput(CmdSignInput)
 	// verify-input
 	InitFlagInput(CmdVerifyInput)
-	InitFlagPrivateKey(CmdVerifyInput)
+	InitFlagPublicKey(CmdVerifyInput)
 	InitFlagOutput(CmdVerifyInput)
 	InitFlagSignature(CmdVerifyInput)
 	// create-sign-request
