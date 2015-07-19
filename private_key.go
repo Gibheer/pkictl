@@ -57,6 +57,8 @@ func create_private_key(cmd *Command, args []string) {
 		pk, err = pki.NewPrivateKeyEcdsa(FlagPrivateKeyGeneration.Curve)
 	case "rsa":
 		pk, err = pki.NewPrivateKeyRsa(FlagPrivateKeyGeneration.Size)
+	case "ed25519":
+		pk, err = pki.NewPrivateKeyEd25519()
 	default:
 		crash_with_help(cmd, ErrorInput, "Unknown private key type '%s'", FlagPrivateKeyGeneration.Type)
 	}
@@ -108,6 +110,7 @@ func checkPrivateKeyGeneration() error {
 		} else {
 			return fmt.Errorf("Length of %d is not allowed for rsa!", size)
 		}
+	case "ed25519":
 	default:
 		return fmt.Errorf("Type %s is unknown!", pk_type)
 	}
