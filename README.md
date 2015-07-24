@@ -28,6 +28,8 @@ The following commnds will be implemented:
 Installation
 ------------
 
+To build pkictl Go 1.4 is required.
+
 The project can be built with
 
     go get github.com/Gibheer/pkictl
