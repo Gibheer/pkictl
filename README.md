@@ -30,9 +30,10 @@ Installation
 
 The project can be built with
 
-    go build
+    go get github.com/Gibheer/pkictl
 
-from the main directory. This will create the binary `pkictl`.
+which fetches all dependencies needed and builds the binary into your
+$GOPATH/bin.
 
 Usage
 -----
