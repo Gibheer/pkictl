@@ -1,5 +1,6 @@
-// Handler to make management of subcommands easier.
 package main
+
+// Handler to make management of subcommands easier.
 
 import (
 	"flag"

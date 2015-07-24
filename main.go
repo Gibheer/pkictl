@@ -1,8 +1,7 @@
-package main
-
 // This package builds a binary which helps to generate
 // private keys, public keys, certificates and also
 // includes functionality to sign and verify messages.
+package main
 
 import (
 	"crypto"
