@@ -1,45 +1,39 @@
 package main
 
-// handle all io and de/encoding of data
-
 import (
-	"encoding/pem"
-	"errors"
-	"io/ioutil"
+	"fmt"
+	"io"
+	"os"
 )
 
-var (
-	ErrBlockNotFound = errors.New("block not found")
-)
-
-// load a pem section from a file
-func readSectionFromFile(path, btype string) ([]byte, error) {
-	raw, err := readFile(path)
-	if err != nil {
-		return raw, err
-	}
-
-	return decodeSection(raw, btype)
-}
-
-// read a file completely and report possible errors
-func readFile(path string) ([]byte, error) {
-	raw, err := ioutil.ReadFile(path)
-	if err != nil {
-		return EmptyByteArray, err
-	}
-	return raw, nil
-}
-
-// decode a pem encoded file and search for the specified section
-func decodeSection(data []byte, btype string) ([]byte, error) {
-	rest := data
-	for len(rest) > 0 {
-		var block *pem.Block
-		block, rest = pem.Decode(rest)
-		if block.Type == btype {
-			return block.Bytes, nil
+// Open a path for writing
+func openOutput(path string) (io.WriteCloser, error) {
+	var (
+		err error
+		out io.WriteCloser
+	)
+	if path == "stdout" {
+		out = os.Stdout
+	} else {
+		out, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|os.O_SYNC, 0700)
+		if err != nil {
+			return nil, err
 		}
 	}
-	return EmptyByteArray, ErrBlockNotFound
+	return out, nil
+}
+
+// Open a path for reading the content
+func openInput(path string) (io.ReadCloser, error) {
+	if path == "" {
+		return nil, fmt.Errorf("empty path is invalid")
+	}
+	var err error
+	var in io.ReadCloser
+	if path == "stdin" {
+		in = os.Stdin
+	} else {
+		in, err = os.Open(path)
+	}
+	return in, err
 }
