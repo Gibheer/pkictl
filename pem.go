@@ -20,13 +20,13 @@ type (
 // To get this working, the section must only be contained one time and nothing
 // but the wanted section must exist.
 func getSectionFromPem(pems pemMap, label string) ([]byte, error) {
-	if len(pems) > 1 {
-		return []byte{}, fmt.Errorf("too many entries in sign request file")
+	if res, found := pems[label]; !found {
+		return []byte{}, fmt.Errorf("could not find section '%s'", label)
+	} else if len(res) > 1 {
+		return []byte{}, fmt.Errorf("too many entries of type '%s'", label)
+	} else {
+		return res[0], nil
 	}
-	if len(pems[label]) > 1 {
-		return []byte{}, fmt.Errorf("too many sign requests found in file")
-	}
-	return pems[label][0], nil
 }
 
 // parse the content of a file into a map of pem decoded bodies
