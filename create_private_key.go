@@ -47,7 +47,7 @@ func CreatePrivateKey(args []string) error {
 	if *flagOutput == "stdout" {
 		out = os.Stdout
 	} else {
-		out, err = os.OpenFile(*flagOutput, os.O_WRONLY|os.O_CREATE|os.O_EXCL|os.O_SYNC, 0700)
+		out, err = os.OpenFile(*flagOutput, os.O_WRONLY|os.O_CREATE|os.O_EXCL|os.O_SYNC, 0600)
 		if err != nil {
 			return err
 		}

@@ -15,7 +15,7 @@ func openOutput(path string) (io.WriteCloser, error) {
 	if path == "stdout" {
 		out = os.Stdout
 	} else {
-		out, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|os.O_SYNC, 0700)
+		out, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL|os.O_SYNC, 0640)
 		if err != nil {
 			return nil, err
 		}
