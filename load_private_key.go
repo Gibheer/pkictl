@@ -27,27 +27,24 @@ func loadPrivateKey(path string) (pki.PrivateKey, error) {
 
 	pems, err := parseFile(file)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load private key: %s", err)
 	}
 	if len(pems) > 1 {
 		return nil, fmt.Errorf("more than one object in file")
 	}
 
-	var pk pki.PrivateKey
 	for key, parts := range pems {
 		if len(parts) > 1 {
 			return nil, fmt.Errorf("more than one object found")
 		}
 		switch key {
 		case pki.PemLabelRsa:
-			pk, err = pki.LoadPrivateKeyRsa(parts[0])
+			return pki.LoadPrivateKeyRsa(parts[0])
 		case pki.PemLabelEd25519:
-			pk, err = pki.LoadPrivateKeyEd25519(parts[0])
+			return pki.LoadPrivateKeyEd25519(parts[0])
 		case pki.PemLabelEcdsa:
-			pk, err = pki.LoadPrivateKeyEcdsa(parts[0])
-		default:
-			return nil, fmt.Errorf("unknown private key format %s", key)
+			return pki.LoadPrivateKeyEcdsa(parts[0])
 		}
 	}
-	return pk, err
+	return nil, fmt.Errorf("no private key found in file '%s'", path)
 }

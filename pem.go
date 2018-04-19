@@ -35,6 +35,9 @@ func parseFile(file io.Reader) (pemMap, error) {
 	if err != nil {
 		return nil, err
 	}
+	if len(raw) == 0 {
+		return nil, fmt.Errorf("file is empty")
+	}
 	return parsePem(raw)
 }
 
