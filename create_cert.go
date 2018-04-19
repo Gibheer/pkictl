@@ -87,14 +87,6 @@ func CreateCert(args []string) error {
 		return fmt.Errorf("missing certificate sign request")
 	}
 
-	out, err := openOutput(flagOutput)
-	if err != nil {
-		return err
-	}
-	// FIXME check all other out.Close for stdout exception
-	if flagOutput != "stdout" {
-		defer out.Close()
-	}
 	pk, err := loadPrivateKey(flagPrivate)
 	if err != nil {
 		return err
@@ -149,26 +141,36 @@ func CreateCert(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	out, err := openOutput(flagOutput)
+	if err != nil {
+		return err
+	}
+	// FIXME check all other out.Close for stdout exception
+	if flagOutput != "stdout" {
+		defer out.Close()
+	}
+
 	return writePem(cert, out)
 }
 
 func parseCSR(path string) (*pki.CertificateRequest, error) {
 	pems_raw, err := openInput(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not open file '%s': %s", path, err)
 	}
 	defer pems_raw.Close()
 	pems, err := parseFile(pems_raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse file '%s': %s", path, err)
 	}
 	csr_raw, err := getSectionFromPem(pems, pki.PemLabelCertificateRequest)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not find sign request in '%s': %s", path, err)
 	}
 	csr, err := pki.LoadCertificateSignRequest(csr_raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load sign request from '%s': %s", path, err)
 	}
 	return csr, nil
 }
@@ -176,20 +178,20 @@ func parseCSR(path string) (*pki.CertificateRequest, error) {
 func parseCA(path string) (*pki.Certificate, error) {
 	pems_raw, err := openInput(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not open file '%s': %s", path, err)
 	}
 	defer pems_raw.Close()
 	pems, err := parseFile(pems_raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not parse file '%s': %s", path, err)
 	}
 	ca_raw, err := getSectionFromPem(pems, pki.PemLabelCertificate)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not find CA in '%s': %s", path, err)
 	}
 	ca, err := pki.LoadCertificate(ca_raw)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load certificate from '%s': %s", path, err)
 	}
 	return ca, nil
 }
