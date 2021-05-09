@@ -12,7 +12,7 @@ import (
 
 const (
 	// Lower boundary limit for RSA private keys
-	RsaLowerLength = 1024
+	RsaLowerLength = 4096
 	// Upper boundary limit for RSA private keys
 	RsaUpperLength = 65536
 )
